@@ -1,0 +1,885 @@
+<!-- Updated recipes.ejs with improved design and bulk delete -->
+<style>
+  /* Force sidebar link colors */
+  .sidebar .nav-link { color: white !important; }
+  .sidebar .nav-link.active { color: #3cd5af !important; background-color: rgba(110, 71, 204, 0.15) !important; }
+  .sidebar .nav-link:hover:not(.active) { background-color: rgba(255, 255, 255, 0.1) !important; }
+  
+  /* Reset any inherited styles from parent elements */
+  .sidebar a, .sidebar a:visited, .sidebar a:hover, .sidebar a:active {
+    text-decoration: none;
+  }
+  
+  /* Recipe card improvements */
+  .recipe-card {
+    border: 1px solid #e3e6f0;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    background-color: #232a47 !important;  /* Match your card background */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .recipe-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    background-color: #2d3654;
+  }
+  
+  .recipe-card.selected {
+     border-color: #3cd5af;
+    background-color: rgba(60, 213, 175, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  }
+  
+  .recipe-card.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+  }
+  
+  .recipe-checkbox {
+    transform: scale(1.2);
+    margin: 0;
+  }
+  
+  .recipe-content {
+    padding: 20px;
+    cursor: pointer;
+  }
+  
+  .recipe-header {
+    display: flex;
+    justify-content: between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  
+  .recipe-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+    flex: 1;
+  }
+  
+  .recipe-time {
+    font-size: 0.875rem;
+    color: #6c757d;
+    white-space: nowrap;
+    margin-left: 12px;
+  }
+  
+  .recipe-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+  }
+  
+  .recipe-category {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #f1f3f4;
+    color: #5a6c7d;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  .recipe-author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6c757d;
+    font-size: 0.875rem;
+  }
+  
+  .author-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .recipe-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .recipe-card:hover .recipe-actions {
+    opacity: 1;
+  }
+  
+  .recipe-actions .btn {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+  }
+  
+  .action-btn-edit {
+    background: rgba(108, 117, 125, 0.9);
+    color: white;
+  }
+  
+  .action-btn-delete {
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+  }
+  
+  .action-btn-edit:hover {
+    background: #6c757d;
+    transform: scale(1.05);
+  }
+  
+  .action-btn-delete:hover {
+    background: #dc3545;
+    transform: scale(1.05);
+  }
+  
+  /* Selection controls */
+  .selection-toolbar {
+  background: #121930;
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+  }
+  
+  .selection-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .select-all-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .select-all-section input[type="checkbox"] {
+    transform: scale(1.2);
+  }
+  
+  .select-all-section label {
+    margin: 0;
+    font-weight: 500;
+  }
+  
+  .selection-info {
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+  
+  .bulk-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  
+  .bulk-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+  
+  .bulk-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+  }
+  
+  .bulk-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .bulk-btn.btn-danger {
+    background: rgba(220, 53, 69, 0.8);
+    border-color: rgba(220, 53, 69, 0.5);
+  }
+  
+  .bulk-btn.btn-danger:hover:not(:disabled) {
+    background: rgba(220, 53, 69, 1);
+    border-color: #dc3545;
+  }
+  
+  .bulk-btn.btn-info {
+    background: rgba(23, 162, 184, 0.8);
+    border-color: rgba(23, 162, 184, 0.5);
+  }
+  
+  .bulk-btn.btn-info:hover:not(:disabled) {
+    background: rgba(23, 162, 184, 1);
+    border-color: #17a2b8;
+  }
+  
+  /* Search improvements */
+  .search-section {
+    background: #232a47;;
+    padding: 20px;
+    border-radius: 0 0 12px 12px;
+    margin-bottom: 24px;
+  }
+  
+  .search-input-group {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  .search-input-group .form-control {
+    border-radius: 25px 0 0 25px;
+    border: 2px solid #e9ecef;
+    padding: 12px 20px;
+  }
+  
+  .search-input-group .form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+  }
+  
+  .search-input-group .btn {
+    border-radius: 0 25px 25px 0;
+    padding: 12px 20px;
+    border: 2px solid #4e73df;
+    border-left: none;
+  }
+  
+  /* Header improvements */
+  .page-header {
+  background: linear-gradient(135deg, #6e47cc 0%, #5a3ab3 100%);  /* Match your purple theme */
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+  
+  .page-title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+  }
+  
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .header-actions .btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+  }
+  
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+  }
+  
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 24px;
+    opacity: 0.5;
+  }
+  
+  .empty-state h3 {
+    margin-bottom: 12px;
+    color: #495057;
+  }
+  
+  /* Responsive improvements */
+  @media (max-width: 768px) {
+    .selection-controls {
+      flex-direction: column;
+      gap: 16px;
+      align-items: stretch;
+    }
+    
+    .bulk-actions {
+      justify-content: center;
+      margin-top: 12px;
+    }
+    
+    .recipe-actions {
+      position: static;
+      opacity: 1;
+      margin-top: 12px;
+      justify-content: flex-end;
+    }
+    
+    .recipe-header {
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .recipe-time {
+      margin-left: 0;
+    }
+  }
+</style>
+
+<div class="page-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="page-title">All Recipes</h1>
+    <div class="header-actions">
+      <a href="/generate/all" class="btn btn-light">
+        <i class="fa fa-plus"></i> Generate New Recipe
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <!-- Search Section -->
+  <div class="search-section">
+    <form method="GET" action="/recipes" id="recipeFilterForm">
+      <div class="search-input-group input-group">
+        <input type="text" class="form-control" placeholder="Search recipes by name, category, or author..." name="search" value="<%= searchTerm %>">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search"></i> Search
+        </button>
+        <% if (searchTerm) { %>
+          <a href="/recipes" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> Clear
+          </a>
+        <% } %>
+      </div>
+    </form>
+  </div>
+  
+  <% if (recipes && recipes.length > 0) { %>
+    <!-- Selection Toolbar -->
+    <div class="selection-toolbar">
+      <div class="selection-controls">
+        <div class="select-all-section">
+          <input type="checkbox" id="selectAllCheckbox" class="form-check-input">
+          <label for="selectAllCheckbox" class="form-check-label">Select All</label>
+          <span class="selection-info" id="selectionInfo">No recipes selected</span>
+        </div>
+      </div>
+      
+      <div class="bulk-actions">
+        <button type="button" class="bulk-btn btn-info" id="exportSelectedBtn" disabled>
+          <i class="fa fa-download"></i> Export Selected (<span id="selectedCount">0</span>)
+        </button>
+        <button type="button" class="bulk-btn btn-danger" id="deleteSelectedBtn" disabled>
+          <i class="fa fa-trash"></i> Delete Selected
+        </button>
+        <a href="/api/export/recipes/excel" class="bulk-btn btn-info" download>
+          <i class="fa fa-file-excel"></i> Export All
+        </a>
+        <button type="button" class="bulk-btn" id="clearSelectionBtn">
+          <i class="fa fa-times"></i> Clear Selection
+        </button>
+      </div>
+    </div>
+    
+    <!-- Recipe Cards -->
+    <div class="card-body">
+      <% recipes.forEach(function(recipe) { %>
+        <div class="recipe-card" data-recipe-id="<%= recipe.id %>">
+          <!-- Selection Checkbox -->
+          <div style="position: absolute; top: 20px; left: 20px; z-index: 5;">
+            <input type="checkbox" class="form-check-input recipe-checkbox" 
+                   value="<%= recipe.id %>" 
+                   data-recipe-name="<%= recipe.recipe_idea %>">
+          </div>
+          
+          <!-- Recipe Actions -->
+          <div class="recipe-actions">
+            <button type="button" class="btn action-btn-delete delete-recipe" 
+                    data-recipe-id="<%= recipe.id %>" 
+                    data-recipe-name="<%= recipe.recipe_idea %>"
+                    title="Delete Recipe">
+              <i class="fa fa-trash"></i>
+            </button>
+          </div>
+          
+          <!-- Recipe Content -->
+          <div class="recipe-content" onclick="window.location.href='/recipe/<%= recipe.id %>'">
+            <div class="recipe-header">
+              <h3 class="recipe-title"><%= recipe.recipe_idea %></h3>
+              <span class="recipe-time"><%= moment(recipe.created_at).fromNow() %></span>
+            </div>
+            
+            <div class="recipe-footer">
+              <div>
+                <% if (recipe.category) { %>
+                  <span class="recipe-category"><%= recipe.category %></span>
+                <% } %>
+              </div>
+              
+              <div class="recipe-author">
+                <span>by</span>
+                <div class="author-avatar" style="background-color: <%= recipe.owner_role === 'admin' ? '#1cc88a' : '#4e73df' %>;">
+                  <%= recipe.owner_name ? recipe.owner_name.charAt(0).toUpperCase() : 'U' %>
+                </div>
+                <span><%= recipe.owner_name || 'Unknown' %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+      
+      <!-- Pagination -->
+      <nav aria-label="Recipe pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+          <% if (currentPage > 1) { %>
+            <li class="page-item">
+              <a class="page-link" href="/recipes?page=<%= currentPage - 1 %><%= searchTerm ? '&search=' + searchTerm : '' %>">Previous</a>
+            </li>
+          <% } else { %>
+            <li class="page-item disabled">
+              <span class="page-link">Previous</span>
+            </li>
+          <% } %>
+          
+          <li class="page-item active">
+            <span class="page-link"><%= currentPage %></span>
+          </li>
+          
+          <% if (recipes.length >= limit) { %>
+            <li class="page-item">
+              <a class="page-link" href="/recipes?page=<%= currentPage + 1 %><%= searchTerm ? '&search=' + searchTerm : '' %>">Next</a>
+            </li>
+          <% } else { %>
+            <li class="page-item disabled">
+              <span class="page-link">Next</span>
+            </li>
+          <% } %>
+        </ul>
+      </nav>
+    </div>
+  <% } else { %>
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <i class="fa fa-utensils"></i>
+      </div>
+      <h3>No Recipes Found</h3>
+      <% if (searchTerm) { %>
+        <p>No recipes found matching "<%= searchTerm %>". <a href="/recipes">View all recipes</a> or <a href="/generate/all">generate a new one</a>.</p>
+      <% } else { %>
+        <p>No recipes have been generated yet. <a href="/generate/all">Generate your first recipe</a>.</p>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Deletion</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete the recipe "<span id="recipeNameToDelete"></span>"? This action cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="bulkDeleteConfirmModal" tabindex="-1" aria-labelledby="bulkDeleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="bulkDeleteConfirmModalLabel">Confirm Bulk Deletion</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete <strong><span id="bulkDeleteCount"></span></strong> selected recipes? This action cannot be undone.</p>
+        <div id="selectedRecipesDeleteList" class="mt-3"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmBulkDeleteBtn">
+          <i class="fa fa-trash"></i> Delete Selected
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Confirmation Modal -->
+<div class="modal fade" id="exportConfirmModal" tabindex="-1" aria-labelledby="exportConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="exportConfirmModalLabel">Export Selected Recipes</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>You are about to export <strong><span id="exportCount"></span></strong> selected recipes to Excel format with embedded images.</p>
+        <div id="selectedRecipesList" class="mt-3"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-info" id="confirmExportBtn">
+          <i class="fa fa-download"></i> Export to Excel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Selection management
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const recipeCheckboxes = document.querySelectorAll('.recipe-checkbox');
+    const exportSelectedBtn = document.getElementById('exportSelectedBtn');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const selectionInfo = document.getElementById('selectionInfo');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    
+    // Update selection display
+    function updateSelectionDisplay() {
+      const selectedCheckboxes = document.querySelectorAll('.recipe-checkbox:checked');
+      const selectedCount = selectedCheckboxes.length;
+      const totalCount = recipeCheckboxes.length;
+      
+      // Update counter
+      selectedCountSpan.textContent = selectedCount;
+      
+      // Update selection info
+      if (selectedCount === 0) {
+        selectionInfo.textContent = 'No recipes selected';
+      } else if (selectedCount === 1) {
+        selectionInfo.textContent = '1 recipe selected';
+      } else {
+        selectionInfo.textContent = `${selectedCount} recipes selected`;
+      }
+      
+      // Update button states
+      const hasSelection = selectedCount > 0;
+      exportSelectedBtn.disabled = !hasSelection;
+      deleteSelectedBtn.disabled = !hasSelection;
+      
+      // Update select all checkbox
+      if (selectedCount === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+      } else if (selectedCount === totalCount) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+      } else {
+        selectAllCheckbox.indeterminate = true;
+      }
+      
+      // Update recipe card styling
+      recipeCheckboxes.forEach(checkbox => {
+        const recipeCard = checkbox.closest('.recipe-card');
+        if (checkbox.checked) {
+          recipeCard.classList.add('selected');
+        } else {
+          recipeCard.classList.remove('selected');
+        }
+      });
+    }
+    
+    // Select all functionality
+    selectAllCheckbox.addEventListener('change', function() {
+      const isChecked = this.checked;
+      recipeCheckboxes.forEach(checkbox => {
+        checkbox.checked = isChecked;
+      });
+      updateSelectionDisplay();
+    });
+    
+    // Individual checkbox functionality
+    recipeCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updateSelectionDisplay);
+      
+      // Prevent event bubbling
+      checkbox.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    });
+    
+    // Clear selection functionality
+    clearSelectionBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      recipeCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      updateSelectionDisplay();
+    });
+    
+    // Bulk delete functionality
+    deleteSelectedBtn.addEventListener('click', function() {
+      const selectedCheckboxes = document.querySelectorAll('.recipe-checkbox:checked');
+      
+      if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one recipe to delete.');
+        return;
+      }
+      
+      // Show bulk delete confirmation modal
+      const deleteModal = new bootstrap.Modal(document.getElementById('bulkDeleteConfirmModal'));
+      const bulkDeleteCount = document.getElementById('bulkDeleteCount');
+      const selectedRecipesDeleteList = document.getElementById('selectedRecipesDeleteList');
+      
+      bulkDeleteCount.textContent = selectedCheckboxes.length;
+      
+      // Build list of selected recipes
+      let recipeListHtml = '<ul class="list-unstyled">';
+      selectedCheckboxes.forEach(checkbox => {
+        const recipeName = checkbox.getAttribute('data-recipe-name');
+        recipeListHtml += `<li><i class="fa fa-times-circle text-danger me-2"></i>${recipeName}</li>`;
+      });
+      recipeListHtml += '</ul>';
+      
+      selectedRecipesDeleteList.innerHTML = recipeListHtml;
+      deleteModal.show();
+    });
+    
+    // Confirm bulk delete
+    document.getElementById('confirmBulkDeleteBtn').addEventListener('click', function() {
+      const selectedCheckboxes = document.querySelectorAll('.recipe-checkbox:checked');
+      const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+      
+      // Disable button and show spinner
+      const btn = this;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+      
+      // Send bulk delete request
+      fetch('/api/recipes/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipeIds: selectedIds })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            throw new Error(`Server returned status ${response.status}: ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Hide modal
+        bootstrap.Modal.getInstance(document.getElementById('bulkDeleteConfirmModal')).hide();
+        
+        // Show success message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.innerHTML = `
+          ${selectedIds.length} recipes deleted successfully!
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.querySelector('.card-body').prepend(alertDiv);
+        
+        // Reload page after short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      })
+      .catch(error => {
+        console.error('Error deleting recipes:', error);
+        
+        // Show error message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+          Error: ${error.message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.querySelector('.card-body').prepend(alertDiv);
+        
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-trash"></i> Delete Selected';
+        
+        // Hide modal
+        bootstrap.Modal.getInstance(document.getElementById('bulkDeleteConfirmModal')).hide();
+      });
+    });
+    
+    // Export selected functionality
+    exportSelectedBtn.addEventListener('click', function() {
+      const selectedCheckboxes = document.querySelectorAll('.recipe-checkbox:checked');
+      
+      if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one recipe to export.');
+        return;
+      }
+      
+      // Show export confirmation modal
+      const exportModal = new bootstrap.Modal(document.getElementById('exportConfirmModal'));
+      const exportCount = document.getElementById('exportCount');
+      const selectedRecipesList = document.getElementById('selectedRecipesList');
+      
+      exportCount.textContent = selectedCheckboxes.length;
+      
+      // Build list of selected recipes
+      let recipeListHtml = '<ul class="list-unstyled">';
+      selectedCheckboxes.forEach(checkbox => {
+        const recipeName = checkbox.getAttribute('data-recipe-name');
+        recipeListHtml += `<li><i class="fa fa-check-circle text-success me-2"></i>${recipeName}</li>`;
+      });
+      recipeListHtml += '</ul>';
+      
+      selectedRecipesList.innerHTML = recipeListHtml;
+      exportModal.show();
+    });
+    
+    // Confirm export functionality
+    document.getElementById('confirmExportBtn').addEventListener('click', function() {
+      const selectedCheckboxes = document.querySelectorAll('.recipe-checkbox:checked');
+      const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+      
+      // Create form to submit selected IDs
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/api/export/recipes/excel/selected';
+      form.style.display = 'none';
+      
+      // Add selected recipe IDs
+      selectedIds.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'recipeIds[]';
+        input.value = id;
+        form.appendChild(input);
+      });
+      
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+      
+      // Close modal
+      bootstrap.Modal.getInstance(document.getElementById('exportConfirmModal')).hide();
+    });
+    
+    // Initialize display
+    updateSelectionDisplay();
+    
+    // Individual delete functionality
+    const deleteButtons = document.querySelectorAll('.delete-recipe');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    const recipeNameToDelete = document.getElementById('recipeNameToDelete');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const recipeId = this.getAttribute('data-recipe-id');
+        const recipeName = this.getAttribute('data-recipe-name');
+        
+        recipeNameToDelete.textContent = recipeName;
+        confirmDeleteBtn.setAttribute('data-recipe-id', recipeId);
+        
+        deleteModal.show();
+      });
+    });
+    
+    // Confirm individual delete
+    confirmDeleteBtn.addEventListener('click', function() {
+      const recipeId = this.getAttribute('data-recipe-id');
+      
+      // Disable button and show spinner
+      const btn = this;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+      
+      // Send delete request
+      fetch(`/api/recipes/delete/${recipeId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            throw new Error(`Server returned status ${response.status}: ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Hide modal
+        deleteModal.hide();
+        
+        // Show success message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.innerHTML = `
+          Recipe deleted successfully!
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.querySelector('.card-body').prepend(alertDiv);
+        
+        // Reload page after short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      })
+      .catch(error => {
+        console.error('Error deleting recipe:', error);
+        
+        // Show error message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+          Error: ${error.message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.querySelector('.card-body').prepend(alertDiv);
+        
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = 'Delete';
+        
+        // Hide modal
+        deleteModal.hide();
+      });
+    });
+  });
+</script>

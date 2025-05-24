@@ -1,0 +1,169 @@
+<!-- views/websites.ejs - Enhanced with employee access display -->
+<div class="container-fluid mt-4">
+  <div class="card shadow">
+    <div class="card-header d-flex justify-content-between align-items-center bg-light">
+      <h3 class="mb-0"><i class="bi bi-globe2 me-2"></i>Website Management</h3>
+      <div>
+        <a href="/" class="btn btn-outline-secondary me-2">
+          <i class="bi bi-house"></i> Dashboard
+        </a>
+        <a href="/websites/add" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Add Website
+        </a>
+      </div>
+    </div>
+    <div class="card-body">
+      <% if (locals.successMessage) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="bi bi-check-circle-fill me-2"></i> <%= successMessage %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      <% } %>
+      
+      <% if (locals.errorMessage) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i> <%= errorMessage %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      <% } %>
+      
+      <% if (websites && websites.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th style="width: 20%">Website</th>
+                <th style="width: 15%">URL</th>
+                <th style="width: 15%">WordPress</th>
+                <th style="width: 10%">Created</th>
+                <th style="width: 25%">Employee Access</th>
+                <th style="width: 15%" class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% websites.forEach(website => { %>
+                <tr class="<%= locals.currentWebsiteId === website.id ? 'table-active' : '' %>">
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="website-icon me-2 d-flex align-items-center justify-content-center bg-light rounded-circle" style="width: 40px; height: 40px;">
+                        <i class="bi bi-globe text-primary"></i>
+                      </div>
+                      <div>
+                        <div class="fw-bold"><%= website.name %></div>
+                        <% if (locals.currentWebsiteId === website.id) { %>
+                          <span class="badge bg-success">Current</span>
+                        <% } %>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <% if (website.url) { %>
+                      <a href="<%= website.url %>" target="_blank" class="text-decoration-none">
+                        <%= website.url %>
+                        <i class="bi bi-box-arrow-up-right text-muted ms-1 small"></i>
+                      </a>
+                    <% } else { %>
+                      <span class="text-muted fst-italic">Not set</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (website.wordpress_api_url) { %>
+                      <span class="badge bg-success p-2">
+                        <i class="bi bi-wordpress me-1"></i> Connected
+                      </span>
+                    <% } else { %>
+                      <span class="badge bg-danger p-2">
+                        <i class="bi bi-x-circle me-1"></i> Not Connected
+                      </span>
+                    <% } %>
+                  </td>
+                  <td><%= new Date(website.created_at).toLocaleDateString() %></td>
+                  <td>
+                    <!-- Employee access summary -->
+                    <div class="employee-access">
+                      <!-- Note: This section requires modifications to your route handler.
+                           You need to fetch employee permissions data when listing websites. -->
+                      
+                      <!-- If we have permissions data available -->
+                      <% if (website.employeeAccess) { %>
+                        <% if (website.employeeAccess.length === 0) { %>
+                          <span class="text-muted fst-italic">No employees have access</span>
+                        <% } else { %>
+                          <div class="d-flex flex-wrap gap-1">
+                            <% website.employeeAccess.forEach(employee => { %>
+                              <span class="badge bg-info text-dark me-1">
+                                <%= employee.name %>
+                              </span>
+                            <% }); %>
+                          </div>
+                        <% } %>
+                      <% } else { %>
+                        <!-- Show a link to manage permissions if data not available -->
+                        <a href="/websites/permissions/<%= website.id %>" class="btn btn-sm btn-outline-info">
+                          <i class="bi bi-people me-1"></i> Manage Permissions
+                        </a>
+                      <% } %>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex justify-content-center gap-1">
+                      <div class="btn-group" role="group">
+                        <a href="/websites/edit/<%= website.id %>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Edit Website">
+                          <i class="bi bi-pencil-square"></i>
+                        </a>
+                        
+                        <% if (locals.currentWebsiteId !== website.id) { %>
+                          <form action="/websites/switch" method="POST" class="d-inline">
+                            <input type="hidden" name="websiteId" value="<%= website.id %>">
+                            <input type="hidden" name="returnUrl" value="/websites">
+                            <button type="submit" class="btn btn-sm btn-outline-success" data-bs-toggle="tooltip" title="Switch to this Website">
+                              <i class="bi bi-check2-circle"></i>
+                            </button>
+                          </form>
+                          
+                          <% if (websites.length > 1) { %>
+                            <form action="/websites/delete/<%= website.id %>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this website? This will NOT delete your data.');">
+                              <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Delete Website">
+                                <i class="bi bi-trash"></i>
+                              </button>
+                            </form>
+                          <% } %>
+                        <% } else { %>
+                          <!-- Current website placeholder button -->
+                          <button type="button" class="btn btn-sm btn-outline-success active" disabled data-bs-toggle="tooltip" title="Current Website">
+                            <i class="bi bi-check2-all"></i>
+                          </button>
+                        <% } %>
+                        
+                        <a href="/websites/permissions/<%= website.id %>" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Manage Permissions">
+                          <i class="bi bi-people"></i>
+                        </a>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info d-flex align-items-center">
+          <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+          <div>
+            <p class="mb-0">No websites have been set up yet. Click the "Add Website" button to create your first website.</p>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Initialize tooltips -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  });
+</script>

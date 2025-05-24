@@ -1,0 +1,1759 @@
+<!-- Keywords management page -->
+<div class="row mb-4">
+  <!-- Stats Section -->
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Keywords Statistics</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="stats-box text-center p-3 border rounded">
+              <h3><%= stats.total %></h3>
+              <p class="mb-0">Total Keywords</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stats-box text-center p-3 border rounded bg-warning bg-opacity-10">
+              <h3><%= stats.pending %></h3>
+              <p class="mb-0">Pending Keywords</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stats-box text-center p-3 border rounded bg-success bg-opacity-10">
+              <h3><%= stats.processed %></h3>
+              <p class="mb-0">Processed Keywords</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stats-box text-center p-3 border rounded bg-danger bg-opacity-10">
+              <h3><%= stats.failed %></h3>
+              <p class="mb-0">Failed Keywords</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Process Keywords Section -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h5 class="card-title">Process Keywords</h5>
+  </div>
+  <div class="card-body">
+    <form id="processKeywordsForm">
+      <div class="mb-3">
+        <label class="form-label">Content Generation Options</label>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="contentOption" id="optionFacebook" value="facebook" checked>
+          <label class="form-check-label" for="optionFacebook">
+            Facebook & Midjourney
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="contentOption" id="optionPinterest" value="pinterest">
+          <label class="form-check-label" for="optionPinterest">
+            Pinterest & Blog
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="contentOption" id="optionAll" value="all">
+          <label class="form-check-label" for="optionAll">
+            All Content
+          </label>
+        </div>
+      </div>
+      
+      <button type="button" id="processSelectedBtn" class="btn btn-success" disabled>
+        Process Selected Keywords (<span id="selectedCount">0</span>)
+      </button>
+      <button type="button" id="processNextBtn" class="btn btn-primary">
+        Process Next Pending Keywords
+      </button>
+    </form>
+  </div>
+</div>
+</div>
+
+<div class="row">
+  <!-- Add Keywords Section -->
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Add Keywords</h5>
+      </div>
+      <div class="card-body">
+       <form id="addKeywordsForm" method="POST">
+          <ul class="nav nav-tabs mb-3" id="inputTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button" role="tab" aria-controls="manual" aria-selected="true">Manual Entry</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="excel-tab" data-bs-toggle="tab" data-bs-target="#excel" type="button" role="tab" aria-controls="excel" aria-selected="false">Excel Upload</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="pinclicks-tab" data-bs-toggle="tab" data-bs-target="#pinclicks" type="button" role="tab" aria-controls="pinclicks" aria-selected="false">PinClicks Analysis</button>
+            </li>
+          </ul>
+          
+          <div class="tab-content" id="inputTabsContent">
+            <!-- Manual Entry Tab -->
+            <div class="tab-pane fade show active" id="manual" role="tabpanel" aria-labelledby="manual-tab">
+              <div class="mb-3">
+                <label for="keywords" class="form-label">Recipe Keywords (One per line)</label>
+                <textarea class="form-control" id="keywords" name="keywords" rows="10" placeholder="Enter one recipe idea per line, for example:
+Chocolate chip cookies
+Beef lasagna
+Vegetarian stir fry
+Thai green curry"></textarea>
+              </div>
+            </div>
+
+            <!-- PinClicks Analysis Tab -->
+            <div class="tab-pane fade" id="pinclicks" role="tabpanel" aria-labelledby="pinclicks-tab">
+              <div class="alert alert-info">
+                <strong>PinClicks Analysis</strong>
+                <p>Upload a CSV file exported from PinClicks. The system will analyze the file to extract relevant interests for your keywords.</p>
+              </div>
+              
+              <div class="mb-3">
+                <label for="pinclicksFile" class="form-label">Upload PinClicks CSV File</label>
+                <input type="file" class="form-control" id="pinclicksFile" name="pinclicksFile" accept=".csv">
+              </div>
+              
+              <div class="mb-3">
+                <label for="pinclicksKeyword" class="form-label">Main Keyword (for this analysis)</label>
+                <input type="text" class="form-control" id="pinclicksKeyword" name="pinclicksKeyword" placeholder="Enter the main keyword this CSV is about">
+                <div class="form-text">This will be used as the recipe keyword in your database.</div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="pinclicksCategory" class="form-label">Category</label>
+                <select class="form-select" id="pinclicksCategory" name="pinclicksCategory">
+                  <option value="">No category</option>
+                  <option value="Breakfast">Breakfast</option>
+                  <option value="Lunch">Lunch</option>
+                  <option value="Dinner">Dinner</option>
+                  <option value="Dessert">Dessert</option>
+                  <option value="Appetizers">Appetizers</option>
+                  <option value="Soups">Soups</option>
+                  <option value="Salads">Salads</option>
+                  <option value="Vegan">Vegan</option>
+                  <option value="Vegetarian">Vegetarian</option>
+                  <option value="Gluten-Free">Gluten-Free</option>
+                  <option value="Low-Carb">Low-Carb</option>
+                  <option value="Keto">Keto</option>
+                  <option value="Paleo">Paleo</option>
+                  <option value="Quick & Easy">Quick & Easy</option>
+                  <option value="Budget-Friendly">Budget-Friendly</option>
+                </select>
+              </div>
+              
+              <div id="pinclicksAnalysisResult" class="mb-3 d-none">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="mb-0">Analysis Results</h6>
+                  </div>
+                  <div class="card-body">
+                    <p><strong>Extracted Interests:</strong></p>
+                    <div id="extractedInterests" class="p-3 bg-light rounded"></div>
+                    <div class="form-text">These interests will be associated with your keyword.</div>
+                  </div>
+                </div>
+              </div>
+              
+              <button type="button" id="analyzePinclicksBtn" class="btn btn-secondary mb-3">Analyze CSV</button>
+              <button type="button" id="addFromPinclicksBtn" class="btn btn-primary mb-3 d-none">Add Keyword with Interests</button>
+            </div>
+            
+            <!-- Excel Upload Tab -->
+            <div class="tab-pane fade" id="excel" role="tabpanel" aria-labelledby="excel-tab">
+              <div class="mb-3">
+                <label for="excelFile" class="form-label">Upload Excel File</label>
+                <input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx, .xls, .csv">
+                <div class="form-text">
+                  Excel file should have columns with these headers:
+                  <ul class="mt-2">
+                    <li><strong>Keyword</strong> (required) - The recipe idea</li>
+                    <li><strong>Category</strong> (optional) - Recipe category</li>
+                    <li><strong>Interests</strong> (optional) - Target audience interests</li>
+                  </ul>
+                </div>
+              </div>
+              <div id="excelPreview" class="mb-3 d-none">
+                <h6>Excel Preview</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered">
+                    <thead id="excelPreviewHeader"></thead>
+                    <tbody id="excelPreviewBody"></tbody>
+                  </table>
+                </div>
+                <p class="text-muted"><small>Showing preview of first 5 rows</small></p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="defaultCategory" class="form-label">Default Category (for keywords without category)</label>
+            <select class="form-select" id="defaultCategory" name="defaultCategory">
+              <option value="">No category</option>
+              <option value="Breakfast">Breakfast</option>
+              <option value="Lunch">Lunch</option>
+              <option value="Dinner">Dinner</option>
+              <option value="Dessert">Dessert</option>
+              <option value="Appetizers">Appetizers</option>
+              <option value="Soups">Soups</option>
+              <option value="Salads">Salads</option>
+              <option value="Vegan">Vegan</option>
+              <option value="Vegetarian">Vegetarian</option>
+              <option value="Gluten-Free">Gluten-Free</option>
+              <option value="Low-Carb">Low-Carb</option>
+              <option value="Keto">Keto</option>
+              <option value="Paleo">Paleo</option>
+              <option value="Quick & Easy">Quick & Easy</option>
+              <option value="Budget-Friendly">Budget-Friendly</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="defaultInterests" class="form-label">Default Interests (for keywords without interests)</label>
+            <input type="text" class="form-control" id="defaultInterests" name="defaultInterests" value="healthy eating, easy recipes, home cooking">
+          </div>
+          
+          <button type="submit" id="addBtn" class="btn btn-primary">Add Keywords</button>
+        </form>
+      </div>
+    </div>
+    
+  </div>
+  
+  
+  <!-- Keywords List Section -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Keywords List</h5>
+          <div>
+            <button id="deleteSelectedBtn" class="btn btn-sm btn-danger" disabled>Delete Selected</button>
+            <button id="refreshBtn" class="btn btn-sm btn-secondary">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <!-- Search and Filter -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <form id="searchForm" class="d-flex">
+              <input type="text" class="form-control me-2" id="searchInput" name="search" placeholder="Search keywords..." value="<%= search || '' %>">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i>
+              </button>
+            </form>
+          </div>
+          <div class="col-md-6">
+            <select id="statusFilter" class="form-select">
+              <option value="" <%= !status ? 'selected' : '' %>>All Keywords</option>
+              <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>Pending</option>
+              <option value="processed" <%= status === 'processed' ? 'selected' : '' %>>Processed</option>
+              <option value="failed" <%= status === 'failed' ? 'selected' : '' %>>Failed</option>
+            </select>
+          </div>
+        </div>
+        
+<!-- Keywords Table with Image Status Column -->
+<div id="statusMessage"></div>
+<div id="processingProgress" class="d-none">
+  <div class="progress mb-3">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+  </div>
+  <p id="progressText" class="text-center">Starting processing...</p>
+</div>
+
+<% if (keywords && keywords.length > 0) { %>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+            </div>
+          </th>
+          <th>Keyword</th>
+          <th>Category</th>
+          <th>Interests</th>
+          <th>Status</th>
+          <th>Image Status</th>
+          <th>Added</th>
+          <th>Attribution</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% keywords.forEach(function(keyword) { %>
+          <tr data-id="<%= keyword.id %>" data-status="<%= keyword.status %>" data-added="<%= keyword.added_at %>">
+            <td>
+              <div class="form-check">
+                <input class="form-check-input keyword-checkbox" type="checkbox" value="<%= keyword.id %>" 
+                       <%= keyword.status === 'processed' ? 'disabled' : '' %>>
+              </div>
+            </td>
+            <td><%= keyword.keyword %></td>
+            <td>
+              <% if (keyword.category) { %>
+                <span class="badge bg-secondary"><%= keyword.category %></span>
+              <% } else { %>
+                <span class="text-muted">None</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (keyword.interests) { %>
+                <small class="text-muted" title="<%= keyword.interests %>">
+                  <%= keyword.interests.length > 30 ? keyword.interests.substring(0, 27) + '...' : keyword.interests %>
+                </small>
+              <% } else { %>
+                <small class="text-muted">None</small>
+              <% } %>
+            </td>
+            <td>
+              <% if (keyword.status === 'pending') { %>
+                <span class="badge bg-warning">Pending</span>
+              <% } else if (keyword.status === 'processed') { %>
+                <span class="badge bg-success">Processed</span>
+              <% } else if (keyword.status === 'failed') { %>
+                <span class="badge bg-danger">Failed</span>
+              <% } %>
+            </td>
+            <td class="image-status-cell" data-recipe-id="<%= keyword.recipe_id %>">
+              <% if (keyword.status === 'processed' && keyword.recipe_id) { %>
+                <span class="image-status-loading">
+                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  Checking...
+                </span>
+              <% } else { %>
+                <span class="badge bg-secondary">N/A</span>
+              <% } %>
+            </td>
+            <td class="date-cell" data-date="<%= keyword.added_at %>"><%= new Date(keyword.added_at).toLocaleString() %></td>
+            <td>
+              <% if (keyword.owner_name) { %>
+                <span class="badge <%= keyword.owner_role === 'admin' ? 'bg-success' : 'bg-primary' %> employee-badge">
+                  <i class="bi bi-person-fill"></i> <%= keyword.owner_name %>
+                </span>
+              <% } else { %>
+                <span class="text-muted">Unknown</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (keyword.status === 'processed' && keyword.recipe_id) { %>
+                <a href="/recipe/<%= keyword.recipe_id %>" class="btn btn-sm btn-primary">
+                  <i class="bi bi-eye"></i> View
+                </a>
+                <button type="button" class="btn btn-sm btn-info regenerate-image-btn" data-recipe-id="<%= keyword.recipe_id %>">
+                  <i class="bi bi-arrow-repeat"></i> Regenerate Image
+                </button>
+              <% } else if (keyword.status === 'pending') { %>
+                <button type="button" class="btn btn-sm btn-success process-btn" data-id="<%= keyword.id %>">
+                  <i class="bi bi-play"></i> Process
+                </button>
+              <% } else if (keyword.status === 'failed') { %>
+                <button type="button" class="btn btn-sm btn-warning retry-btn" data-id="<%= keyword.id %>">
+                  <i class="bi bi-arrow-clockwise"></i> Retry
+                </button>
+              <% } %>
+              <% if (keyword.status !== 'processed') { %>
+                <button type="button" class="btn btn-sm btn-danger delete-btn" data-id="<%= keyword.id %>">
+                  <i class="bi bi-trash"></i>
+                </button>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Pagination -->
+  <% if (totalPages > 1) { %>
+    <nav aria-label="Keywords pagination">
+      <ul class="pagination justify-content-center">
+        <% if (currentPage > 1) { %>
+          <li class="page-item">
+            <a class="page-link" href="/keywords?page=<%= currentPage - 1 %><%= status ? '&status=' + status : '' %><%= search ? '&search=' + search : '' %>">Previous</a>
+          </li>
+        <% } else { %>
+          <li class="page-item disabled">
+            <span class="page-link">Previous</span>
+          </li>
+        <% } %>
+        
+        <% for (let i = 1; i <= totalPages; i++) { %>
+          <% if (i === currentPage) { %>
+            <li class="page-item active">
+              <span class="page-link"><%= i %></span>
+            </li>
+          <% } else if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) { %>
+            <li class="page-item">
+              <a class="page-link" href="/keywords?page=<%= i %><%= status ? '&status=' + status : '' %><%= search ? '&search=' + search : '' %>"><%= i %></a>
+            </li>
+          <% } else if (i === currentPage - 3 || i === currentPage + 3) { %>
+            <li class="page-item disabled">
+              <span class="page-link">...</span>
+            </li>
+          <% } %>
+        <% } %>
+        
+        <% if (currentPage < totalPages) { %>
+          <li class="page-item">
+            <a class="page-link" href="/keywords?page=<%= currentPage + 1 %><%= status ? '&status=' + status : '' %><%= search ? '&search=' + search : '' %>">Next</a>
+          </li>
+        <% } else { %>
+          <li class="page-item disabled">
+            <span class="page-link">Next</span>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+  <% } %>
+<% } else { %>
+  <div class="alert alert-info">
+    No keywords found. Add some keywords to get started.
+  </div>
+<% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Process Result Modal -->
+<div class="modal fade" id="processResultModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Processing Results</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-hover" id="resultTable">
+            <thead>
+              <tr>
+                <th>Keyword</th>
+                <th>Status</th>
+                <th>Message</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="resultTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">Are you sure you want to perform this action?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmButton">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt Edit Modal -->
+<div class="modal fade" id="promptEditModal" tabindex="-1" aria-labelledby="promptEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="promptEditModalLabel">Edit Midjourney Prompt</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="promptEditAlert" class="alert alert-danger d-none">
+          <p><strong>Safety check failed!</strong> Your prompt contains potentially blocked terms:</p>
+          <p id="promptEditBlockedTerms"></p>
+          <p>Please modify these terms to avoid being blocked by Midjourney's safety filter.</p>
+        </div>
+        
+        <form id="promptEditForm">
+          <input type="hidden" id="promptEditRecipeId" name="recipeId">
+          
+          <div class="mb-3">
+            <label for="promptEditText" class="form-label">Midjourney Prompt:</label>
+            <textarea class="form-control" id="promptEditText" name="prompt" rows="6" required></textarea>
+            <div class="form-text">
+              Edit this prompt to avoid terms that might trigger Midjourney's safety filter.
+              <br>Common issues: terms like "skillet" (contains "kill"), "skillful", etc.
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Troubleshooting Tips:</label>
+            <ul class="small">
+              <li>Replace "skillet" with "pan" or "cooking pan"</li>
+              <li>Replace problematic words with synonyms</li>
+              <li>If specific ingredients are causing issues, try rewording them</li>
+            </ul>
+          </div>
+        </form>
+        
+        <div id="promptEditSpinner" class="text-center d-none">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Generating image with edited prompt...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="promptEditSaveBtn">Generate Image</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Excel file handling variables
+  let parsedExcelData = null;
+  
+  // Simple helper to safely add click handlers
+  function safeAddClickHandler(elementId, handler) {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.onclick = handler;
+    } else {
+      console.warn(`Element with ID '${elementId}' not found`);
+    }
+  }
+
+  // Add this function to your JavaScript
+  function getCurrentActiveTab() {
+    const manualTab = document.getElementById('manual-tab');
+    const excelTab = document.getElementById('excel-tab');
+    const pinclicksTab = document.getElementById('pinclicks-tab');
+    
+    if (manualTab && manualTab.classList.contains('active')) return 'manual-tab';
+    if (excelTab && excelTab.classList.contains('active')) return 'excel-tab';
+    if (pinclicksTab && pinclicksTab.classList.contains('active')) return 'pinclicks-tab';
+    
+    // Default to manual if can't determine
+    return 'manual-tab';
+  }
+
+  // Update selected count
+  function updateSelectedCount() {
+    const count = document.querySelectorAll('.keyword-checkbox:checked').length;
+    const countElement = document.getElementById('selectedCount');
+    if (countElement) {
+      countElement.textContent = count;
+    }
+    
+    const processBtn = document.getElementById('processSelectedBtn');
+    if (processBtn) {
+      processBtn.disabled = count === 0;
+      if (processBtn.textContent.includes('(')) {
+        processBtn.textContent = processBtn.textContent.replace(/\(\d+\)/, `(${count})`);
+      }
+    }
+    
+    // Enable or disable the delete selected button
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    if (deleteSelectedBtn) {
+      deleteSelectedBtn.disabled = count === 0;
+    }
+  }
+
+  // Setup checkbox listeners
+  const checkboxes = document.querySelectorAll('.keyword-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('click', function() {
+      updateSelectedCount();
+    });
+  });
+  
+  // Select All Checkbox
+  const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('click', function() {
+      const checkboxes = document.querySelectorAll('.keyword-checkbox:not(:disabled)');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+      updateSelectedCount();
+    });
+  }
+  
+  // Status filter change
+  const statusFilter = document.getElementById('statusFilter');
+  if (statusFilter) {
+    statusFilter.addEventListener('change', function() {
+      window.location.href = '/keywords' + 
+        (this.value ? '?status=' + this.value : '') + 
+        (document.getElementById('searchInput')?.value ? 
+          (this.value ? '&' : '?') + 'search=' + document.getElementById('searchInput').value : '');
+    });
+  }
+  
+  const refreshBtn = document.getElementById('refreshBtn');
+if (refreshBtn) {
+  refreshBtn.addEventListener('click', function() {
+    console.log('🔄 Force refreshing page with cache-busting...');
+    
+    // Add cache-busting parameter
+    const url = new URL(window.location);
+    url.searchParams.set('_refresh', Date.now());
+    window.location.href = url.toString();
+  });
+}
+
+  // Status message function
+  function showStatus(type, message) {
+    const statusElement = document.getElementById('statusMessage');
+    if (!statusElement) return;
+    
+    let alertClass = 'alert-info';
+    if (type === 'error') alertClass = 'alert-danger';
+    if (type === 'success') alertClass = 'alert-success';
+    if (type === 'warning') alertClass = 'alert-warning';
+    
+    statusElement.innerHTML = `
+      <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+    
+    // Scroll to status
+    statusElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // Process selected keywords
+  safeAddClickHandler('processSelectedBtn', function() {
+    const selectedKeywords = Array.from(document.querySelectorAll('.keyword-checkbox:checked'))
+      .map(cb => cb.value);
+    
+    if (selectedKeywords.length === 0) {
+      alert('No keywords selected for processing.');
+      return;
+    }
+    
+    // Get the selected content option
+    const optionElement = document.querySelector('input[name="contentOption"]:checked');
+    const contentOption = optionElement ? optionElement.value : 'facebook';
+    
+    if (confirm(`Process ${selectedKeywords.length} keywords with ${contentOption} option?`)) {
+      // Show loading indicator
+      const statusElement = document.getElementById('statusMessage');
+      if (statusElement) {
+        statusElement.innerHTML = '<div class="alert alert-info">Processing keywords, please wait...</div>';
+      }
+      
+      // Show processing progress
+      const progressElement = document.getElementById('processingProgress');
+      const progressBar = progressElement.querySelector('.progress-bar');
+      const progressText = document.getElementById('progressText');
+      
+      progressElement.classList.remove('d-none');
+      progressBar.style.width = '0%';
+      progressBar.setAttribute('aria-valuenow', 0);
+      progressText.textContent = 'Starting processing...';
+      
+      // Process keywords in sequence to ensure proper order
+      processKeywordsInSequence(selectedKeywords, contentOption);
+    }
+  });
+  
+  // Process keywords in sequence (one by one) - FIXED VERSION
+async function processKeywordsInSequence(keywordIds, contentOption) {
+  const total = keywordIds.length;
+  let processed = 0;
+  const results = [];
+  
+  const progressBar = document.querySelector('.progress-bar');
+  const progressText = document.getElementById('progressText');
+  
+  // Process each keyword one by one
+  for (const keywordId of keywordIds) {
+    try {
+      // Update progress
+      const progress = Math.round((processed / total) * 100);
+      progressBar.style.width = `${progress}%`;
+      progressBar.setAttribute('aria-valuenow', progress);
+      progressText.textContent = `Processing keyword ${processed + 1} of ${total}...`;
+      
+      console.log(`🔄 Processing keyword ${processed + 1}/${total}: ${keywordId}`);
+      
+      // Process the current keyword
+      const response = await fetch('/api/keywords/process-selected', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache', // CRITICAL: Prevent caching
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify({
+          keywordIds: [keywordId],
+          contentOption: contentOption
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.results && data.results.length > 0) {
+        const result = data.results[0];
+        results.push({
+          id: keywordId,
+          success: result.status === 'processed',
+          message: result.status === 'processed' ? 'Processed successfully' : (result.message || 'Processing failed'),
+          status: result.status,
+          recipeId: result.recipeId
+        });
+        
+        console.log(`✅ Keyword ${keywordId} processed successfully with status: ${result.status}`);
+        
+        // CRITICAL FIX: Update the UI immediately for this keyword
+        updateKeywordRowInUI(keywordId, result);
+        
+      } else {
+        console.error(`❌ Failed to process keyword ${keywordId}:`, data);
+        results.push({
+          id: keywordId,
+          success: false,
+          message: data.message || 'Processing failed',
+          status: 'failed'
+        });
+        
+        // Update UI to show failed status
+        updateKeywordRowInUI(keywordId, { status: 'failed', message: data.message });
+      }
+      
+      // Add a small delay between keywords to prevent overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+      
+    } catch (error) {
+      console.error(`❌ Error processing keyword ${keywordId}:`, error);
+      results.push({
+        id: keywordId,
+        success: false,
+        message: error.message || 'Error processing',
+        status: 'failed'
+      });
+      
+      // Update UI to show failed status
+      updateKeywordRowInUI(keywordId, { status: 'failed', message: error.message });
+    }
+    
+    processed++;
+  }
+  
+  // Hide progress and show final results
+  document.getElementById('processingProgress').classList.add('d-none');
+  
+  const successCount = results.filter(r => r.success).length;
+  console.log(`🏁 Processing complete: ${successCount}/${total} successful`);
+  
+  // Show success message
+  showStatus('success', `Processed ${successCount} of ${total} keywords successfully.`);
+  
+  // CRITICAL FIX: Force page reload after a delay to ensure all data is fresh
+  setTimeout(() => {
+    console.log('🔄 Reloading page to ensure fresh data...');
+    window.location.reload();
+  }, 3000); // 3 second delay to show the success message
+}
+
+// NEW FUNCTION: Update individual keyword row in the UI
+function updateKeywordRowInUI(keywordId, result) {
+  try {
+    const row = document.querySelector(`tr[data-id="${keywordId}"]`);
+    if (!row) {
+      console.warn(`⚠️ Could not find row for keyword ${keywordId}`);
+      return;
+    }
+    
+    console.log(`🔄 Updating UI for keyword ${keywordId} with status: ${result.status}`);
+    
+    // Update status column
+    const statusCell = row.querySelector('td:nth-child(5)'); // Assuming status is the 5th column
+    if (statusCell) {
+      let statusBadge = '';
+      if (result.status === 'processed') {
+        statusBadge = '<span class="badge bg-success">Processed</span>';
+        
+        // Update actions column to show View button
+        const actionsCell = row.querySelector('td:last-child');
+        if (actionsCell && result.recipeId) {
+          actionsCell.innerHTML = `
+            <a href="/recipe/${result.recipeId}" class="btn btn-sm btn-primary">
+              <i class="bi bi-eye"></i> View
+            </a>
+            <button type="button" class="btn btn-sm btn-info regenerate-image-btn" data-recipe-id="${result.recipeId}">
+              <i class="bi bi-arrow-repeat"></i> Regenerate Image
+            </button>
+          `;
+        }
+        
+        // Disable checkbox for processed keywords
+        const checkbox = row.querySelector('.keyword-checkbox');
+        if (checkbox) {
+          checkbox.disabled = true;
+          checkbox.checked = false;
+        }
+        
+      } else if (result.status === 'failed') {
+        statusBadge = '<span class="badge bg-danger">Failed</span>';
+      } else if (result.status === 'pending') {
+        statusBadge = '<span class="badge bg-warning">Pending</span>';
+      }
+      
+      statusCell.innerHTML = statusBadge;
+    }
+    
+    // Update the row's data-status attribute
+    row.setAttribute('data-status', result.status);
+    
+    // Add a subtle highlight to show the change
+    row.style.backgroundColor = '#d4edda'; // Light green background
+    setTimeout(() => {
+      row.style.backgroundColor = ''; // Remove highlight after 2 seconds
+    }, 2000);
+    
+    console.log(`✅ Updated UI for keyword ${keywordId}`);
+    
+  } catch (error) {
+    console.error(`❌ Error updating UI for keyword ${keywordId}:`, error);
+  }
+}
+
+  
+  // Process next pending keywords
+  safeAddClickHandler('processNextBtn', function() {
+    const optionElement = document.querySelector('input[name="contentOption"]:checked');
+    const contentOption = optionElement ? optionElement.value : 'facebook';
+    
+    const pendingKeywords = Array.from(document.querySelectorAll('tr[data-status="pending"]'))
+      .map(row => row.getAttribute('data-id'))
+      .slice(0, 5);
+    
+    if (pendingKeywords.length === 0) {
+      alert('No pending keywords found.');
+      return;
+    }
+    
+    if (confirm(`Process ${pendingKeywords.length} pending keywords with ${contentOption} option?`)) {
+      // Show loading indicator
+      const statusElement = document.getElementById('statusMessage');
+      if (statusElement) {
+        statusElement.innerHTML = '<div class="alert alert-info">Processing keywords, please wait...</div>';
+      }
+      
+      // Show processing progress
+      const progressElement = document.getElementById('processingProgress');
+      const progressBar = progressElement.querySelector('.progress-bar');
+      const progressText = document.getElementById('progressText');
+      
+      progressElement.classList.remove('d-none');
+      progressBar.style.width = '0%';
+      progressBar.setAttribute('aria-valuenow', 0);
+      progressText.textContent = 'Starting processing...';
+      
+      // Process keywords in sequence to ensure proper order
+      processKeywordsInSequence(pendingKeywords, contentOption);
+    }
+  });
+  
+  // Process buttons in the keywords list
+  document.querySelectorAll('.process-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const keywordId = this.getAttribute('data-id');
+      const optionElement = document.querySelector('input[name="contentOption"]:checked');
+      const contentOption = optionElement ? optionElement.value : 'facebook';
+      
+      if (confirm(`Process this keyword with ${contentOption} option?`)) {
+        const statusElement = document.getElementById('statusMessage');
+        if (statusElement) {
+          statusElement.innerHTML = '<div class="alert alert-info">Processing keyword, please wait...</div>';
+        }
+        
+        fetch('/api/keywords/process-selected', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            keywordIds: [keywordId],
+            contentOption: contentOption
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showStatus('success', 'Keyword processed successfully!');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            showStatus('error', data.message || 'Error processing keyword');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('error', 'Error processing keyword: ' + error.message);
+        });
+      }
+    });
+  });
+  
+  // Retry buttons
+  document.querySelectorAll('.retry-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const keywordId = this.getAttribute('data-id');
+      const optionElement = document.querySelector('input[name="contentOption"]:checked');
+      const contentOption = optionElement ? optionElement.value : 'facebook';
+      
+      if (confirm(`Retry processing this keyword with ${contentOption} option?`)) {
+        const statusElement = document.getElementById('statusMessage');
+        if (statusElement) {
+          statusElement.innerHTML = '<div class="alert alert-info">Processing keyword, please wait...</div>';
+        }
+        
+        fetch('/api/keywords/process-selected', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            keywordIds: [keywordId],
+            contentOption: contentOption
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showStatus('success', 'Keyword processed successfully!');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            showStatus('error', data.message || 'Error processing keyword');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('error', 'Error processing keyword: ' + error.message);
+        });
+      }
+    });
+  });
+  
+  // Delete selected keywords
+  const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+  if (deleteSelectedBtn) {
+    deleteSelectedBtn.addEventListener('click', function() {
+      const selectedKeywords = Array.from(document.querySelectorAll('.keyword-checkbox:checked'))
+        .map(cb => cb.value);
+        
+      if (selectedKeywords.length === 0) {
+        alert('No keywords selected for deletion.');
+        return;
+      }
+      
+      if (confirm(`Are you sure you want to delete ${selectedKeywords.length} selected keywords? This action cannot be undone.`)) {
+        deleteKeywords(selectedKeywords);
+      }
+    });
+  }
+  
+  // Delete buttons
+  document.querySelectorAll('.delete-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const keywordId = this.getAttribute('data-id');
+      
+      if (confirm('Are you sure you want to delete this keyword? This action cannot be undone.')) {
+        deleteKeywords([keywordId]);
+      }
+    });
+  });
+      
+  // Helper function: Delete keywords
+  async function deleteKeywords(keywordIds) {
+    if (!keywordIds || keywordIds.length === 0) {
+      showStatus('error', 'No keywords selected for deletion.');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/keywords/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ keywordIds })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showStatus('success', data.message || `Deleted ${data.count} keywords successfully`);
+        
+        // Reload after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        throw new Error(data.message || 'Failed to delete keywords');
+      }
+    } catch (error) {
+      console.error('Error deleting keywords:', error);
+      showStatus('error', error.message || 'An unknown error occurred');
+    }
+  }
+
+  // Check image status for all processed recipes
+  function checkImageStatus() {
+    const imageStatusCells = document.querySelectorAll('.image-status-cell[data-recipe-id]');
+    
+    imageStatusCells.forEach(async (cell) => {
+      const recipeId = cell.getAttribute('data-recipe-id');
+      if (!recipeId) return;
+      
+      try {
+        const response = await fetch(`/midjourney/api/recipe/${recipeId}`);
+        const data = await response.json();
+        
+        if (data.success && data.images && data.images.length > 0) {
+          // Check the status of the most recent image
+          const latestImage = data.images[0];
+          
+          if (latestImage.status === 'completed') {
+            cell.innerHTML = `<span class="badge bg-success">Generated</span>`;
+          } else if (latestImage.status === 'pending') {
+            cell.innerHTML = `<span class="badge bg-warning">Pending</span>`;
+          } else if (latestImage.status === 'failed') {
+            cell.innerHTML = `<span class="badge bg-danger">Failed</span>`;
+          } else {
+            cell.innerHTML = `<span class="badge bg-secondary">${latestImage.status}</span>`;
+          }
+        } else {
+          cell.innerHTML = `<span class="badge bg-secondary">No Images</span>`;
+        }
+      } catch (error) {
+        console.error(`Error checking image status for recipe ${recipeId}:`, error);
+        cell.innerHTML = `<span class="badge bg-danger">Error</span>`;
+      }
+    });
+  }
+  
+  // Add event listeners for regenerate image buttons
+  document.querySelectorAll('.regenerate-image-btn').forEach(button => {
+    button.addEventListener('click', async function() {
+      const recipeId = this.getAttribute('data-recipe-id');
+      if (!recipeId) {
+        showStatus('error', 'Recipe ID not found for regeneration');
+        return;
+      }
+      
+      if (confirm('Are you sure you want to regenerate the image for this recipe?')) {
+        try {
+          // Disable the button and show loading state
+          this.disabled = true;
+          const originalText = this.innerHTML;
+          this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Regenerating...';
+          
+          // Call the API to regenerate the image
+          const response = await fetch(`/midjourney/api/generate/${recipeId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            showStatus('success', 'Image generation started successfully');
+            
+            // Find the image status cell for this recipe and update it
+            const statusCell = document.querySelector(`.image-status-cell[data-recipe-id="${recipeId}"]`);
+            if (statusCell) {
+              statusCell.innerHTML = `<span class="badge bg-warning">Pending</span>`;
+            }
+            
+            // Re-enable the button after a delay
+            setTimeout(() => {
+              this.disabled = false;
+              this.innerHTML = originalText;
+            }, 3000);
+          } else {
+            showStatus('error', data.error || 'Failed to regenerate image');
+            this.disabled = false;
+            this.innerHTML = originalText;
+          }
+        } catch (error) {
+          console.error('Error regenerating image:', error);
+          showStatus('error', error.message || 'An unknown error occurred');
+          this.disabled = false;
+          this.innerHTML = originalText;
+        }
+      }
+    });
+  });
+
+  // Fix date formatting using date-fns
+  function formatDates() {
+    document.querySelectorAll('.date-cell').forEach(cell => {
+      const dateStr = cell.getAttribute('data-date');
+      if (dateStr) {
+        try {
+          // Use date-fns to format relative time
+          const date = new Date(dateStr);
+          const timeAgo = dateFns.formatDistanceToNow(date, { addSuffix: true });
+          
+          // Format exact date for tooltip
+          const formattedDate = dateFns.format(date, 'PPpp');
+          
+          // Update cell with both formats
+          cell.innerHTML = `<span title="${formattedDate}">${timeAgo}</span>`;
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          // Fallback to basic formatting
+          const date = new Date(dateStr);
+          cell.innerHTML = date.toLocaleString();
+        }
+      }
+    });
+  }
+    
+  // Sort rows by date when needed
+  function sortRowsByDate() {
+    const tbody = document.querySelector('table tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr[data-added]'));
+    
+    // Sort rows by the added_at date in descending order (newest first)
+    rows.sort((a, b) => {
+      const dateA = new Date(a.getAttribute('data-added') || 0);
+      const dateB = new Date(b.getAttribute('data-added') || 0);
+      return dateB - dateA;
+    });
+    
+    // Reattach rows in the sorted order
+    rows.forEach(row => tbody.appendChild(row));
+  }
+  
+  // PinClicks Analysis
+  let analyzedPinclicksData = null;
+  
+  const analyzePinclicksBtn = document.getElementById('analyzePinclicksBtn');
+  if (analyzePinclicksBtn) {
+    analyzePinclicksBtn.addEventListener('click', function() {
+      const pinclicksFile = document.getElementById('pinclicksFile');
+      const pinclicksKeyword = document.getElementById('pinclicksKeyword');
+      const pinclicksCategory = document.getElementById('pinclicksCategory');
+      const extractedInterests = document.getElementById('extractedInterests');
+      const pinclicksAnalysisResult = document.getElementById('pinclicksAnalysisResult');
+      const addFromPinclicksBtn = document.getElementById('addFromPinclicksBtn');
+      
+      // Validate input
+      const file = pinclicksFile.files[0];
+      const keyword = pinclicksKeyword.value.trim();
+      
+      if (!file) {
+        showStatus('error', 'Please upload a PinClicks CSV file.');
+        return;
+      }
+      
+      if (!keyword) {
+        showStatus('error', 'Please enter the main keyword for this analysis.');
+        return;
+      }
+      
+      // Show loading state
+      analyzePinclicksBtn.disabled = true;
+      analyzePinclicksBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+      
+      // Read the file
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const csvData = e.target.result;
+        
+        // Call the server to analyze the CSV
+        fetch('/api/analyze-pinclicks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            csv: csvData,
+            keyword: keyword
+          })
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
+            // Store the analyzed data
+            analyzedPinclicksData = {
+              keyword: keyword,
+              category: pinclicksCategory.value,
+              interests: data.interests
+            };
+            
+            // Display the extracted interests
+            extractedInterests.innerHTML = `<p class="mb-1">${data.interests}</p>`;
+            
+            // Show the results and the add button
+            pinclicksAnalysisResult.classList.remove('d-none');
+            addFromPinclicksBtn.classList.remove('d-none');
+            
+            showStatus('success', 'Analysis complete! Review the extracted interests below.');
+          } else {
+            throw new Error(data.message || 'Failed to analyze PinClicks data');
+          }
+        })
+        .catch(error => {
+          console.error('Error analyzing PinClicks data:', error);
+          showStatus('error', error.message || 'An unknown error occurred');
+        })
+        .finally(() => {
+          // Reset button state
+          analyzePinclicksBtn.disabled = false;
+          analyzePinclicksBtn.innerHTML = 'Analyze CSV';
+        });
+      };
+      
+      reader.onerror = function(error) {
+        console.error('Error reading file:', error);
+        showStatus('error', 'Failed to read file');
+        analyzePinclicksBtn.disabled = false;
+        analyzePinclicksBtn.innerHTML = 'Analyze CSV';
+      };
+      
+      reader.readAsText(file);
+    });
+  }
+  
+  // Add from PinClicks button
+  const addFromPinclicksBtn = document.getElementById('addFromPinclicksBtn');
+  if (addFromPinclicksBtn) {
+    addFromPinclicksBtn.addEventListener('click', function() {
+      if (!analyzedPinclicksData) {
+        showStatus('error', 'Please analyze the CSV file first.');
+        return;
+      }
+      
+      // Show loading state
+      addFromPinclicksBtn.disabled = true;
+      addFromPinclicksBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+      
+      fetch('/api/keywords/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          keywords: [analyzedPinclicksData]
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showStatus('success', 'Keyword added successfully with extracted interests!');
+          
+          // Reset the form
+          document.getElementById('pinclicksFile').value = '';
+          document.getElementById('pinclicksKeyword').value = '';
+          document.getElementById('pinclicksCategory').value = '';
+          document.getElementById('pinclicksAnalysisResult').classList.add('d-none');
+          addFromPinclicksBtn.classList.add('d-none');
+          analyzedPinclicksData = null;
+          
+          // Reload after a short delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          throw new Error(data.message || 'Failed to add keyword');
+        }
+      })
+      .catch(error => {
+        console.error('Error adding keyword from PinClicks:', error);
+        showStatus('error', error.message || 'An unknown error occurred');
+      })
+      .finally(() => {
+        // Reset button state
+        addFromPinclicksBtn.disabled = false;
+        addFromPinclicksBtn.innerHTML = 'Add Keyword with Interests';
+      });
+    });
+  }
+  
+  // Prompt editing functionality
+  const promptEditModal = document.getElementById('promptEditModal');
+  if (promptEditModal) {
+    let promptEditModalInstance = new bootstrap.Modal(promptEditModal);
+    
+    // Initialize prompt edit form
+    const promptEditSaveBtn = document.getElementById('promptEditSaveBtn');
+    if (promptEditSaveBtn) {
+      promptEditSaveBtn.addEventListener('click', async function() {
+        // Get form data
+        const recipeId = document.getElementById('promptEditRecipeId').value;
+        const prompt = document.getElementById('promptEditText').value;
+        
+        // Validate
+        if (!recipeId || !prompt.trim()) {
+          document.getElementById('promptEditAlert').classList.remove('d-none');
+          document.getElementById('promptEditBlockedTerms').textContent = 'Please provide a valid prompt.';
+          return;
+        }
+        
+        // Show loading state
+        promptEditSaveBtn.disabled = true;
+        promptEditSaveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+        document.getElementById('promptEditForm').classList.add('d-none');
+        document.getElementById('promptEditSpinner').classList.remove('d-none');
+        
+        try {
+          // Submit the edited prompt
+          const response = await fetch('/midjourney/api/generate-with-prompt', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              recipeId,
+              prompt
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            // Close the modal
+            promptEditModalInstance.hide();
+            
+            // Show success message
+            showStatus('success', 'Image generation started with edited prompt');
+            
+            // Find the image status cell for this recipe and update it
+            const statusCell = document.querySelector(`.image-status-cell[data-recipe-id="${recipeId}"]`);
+            if (statusCell) {
+              statusCell.innerHTML = `<span class="badge bg-warning">Pending</span>`;
+            }
+            
+            // Reset form
+            document.getElementById('promptEditForm').reset();
+          } else if (data.safetyCheck && data.safetyCheck.blocked) {
+            // Safety check failed, show error
+            document.getElementById('promptEditAlert').classList.remove('d-none');
+            document.getElementById('promptEditBlockedTerms').textContent = 
+              data.safetyCheck.terms.join(', ');
+            
+            // Re-enable form
+            document.getElementById('promptEditForm').classList.remove('d-none');
+            document.getElementById('promptEditSpinner').classList.add('d-none');
+          } else {
+            throw new Error(data.error || 'Failed to generate image');
+          }
+        } catch (error) {
+          console.error('Error generating image with edited prompt:', error);
+          document.getElementById('promptEditAlert').classList.remove('d-none');
+          document.getElementById('promptEditBlockedTerms').textContent = 
+            error.message || 'An unknown error occurred';
+        } finally {
+          // Reset button state
+          promptEditSaveBtn.disabled = false;
+          promptEditSaveBtn.innerHTML = 'Generate Image';
+          document.getElementById('promptEditForm').classList.remove('d-none');
+          document.getElementById('promptEditSpinner').classList.add('d-none');
+        }
+      });
+    }
+    
+    // Reset modal when it's closed
+    promptEditModal.addEventListener('hidden.bs.modal', function() {
+      document.getElementById('promptEditForm').reset();
+      document.getElementById('promptEditAlert').classList.add('d-none');
+      document.getElementById('promptEditForm').classList.remove('d-none');
+      document.getElementById('promptEditSpinner').classList.add('d-none');
+      promptEditSaveBtn.disabled = false;
+      promptEditSaveBtn.innerHTML = 'Generate Image';
+    });
+  }
+
+  // Excel file input handler
+  const excelFileInput = document.getElementById('excelFile');
+  if (excelFileInput) {
+    excelFileInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) {
+        document.getElementById('excelPreview').classList.add('d-none');
+        parsedExcelData = null;
+        return;
+      }
+      
+      // Validate file type
+      const allowedTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls
+        'text/csv' // .csv
+      ];
+      
+      if (!allowedTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+        showStatus('error', 'Please upload a valid Excel file (.xlsx, .xls) or CSV file.');
+        return;
+      }
+      
+      // Read and parse the file
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          let workbook;
+          
+          if (file.name.toLowerCase().endsWith('.csv')) {
+            // Handle CSV files
+            const csvData = e.target.result;
+            const lines = csvData.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const rows = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+              if (lines[i].trim()) {
+                const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                const row = {};
+                headers.forEach((header, index) => {
+                  row[header] = values[index] || '';
+                });
+                rows.push(row);
+              }
+            }
+            
+            parsedExcelData = {
+              headers: headers,
+              data: rows
+            };
+          } else {
+            // Handle Excel files
+            workbook = XLSX.read(e.target.result, { type: 'binary' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convert to JSON
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            if (jsonData.length === 0) {
+              showStatus('error', 'The uploaded file appears to be empty.');
+              return;
+            }
+            
+            // Extract headers and data
+            const headers = jsonData[0];
+            const data = jsonData.slice(1).filter(row => row.some(cell => cell !== undefined && cell !== '')).map(row => {
+              const rowObj = {};
+              headers.forEach((header, index) => {
+                rowObj[header] = row[index] || '';
+              });
+              return rowObj;
+            });
+            
+            parsedExcelData = {
+              headers: headers,
+              data: data
+            };
+          }
+          
+          // Validate required columns
+          const requiredColumns = ['keyword'];
+          const optionalColumns = ['category', 'interests'];
+          const allColumns = [...requiredColumns, ...optionalColumns];
+          
+          // Check for required columns (case-insensitive)
+          const headerLower = parsedExcelData.headers.map(h => h.toLowerCase());
+          const missingRequired = requiredColumns.filter(col => 
+            !headerLower.some(h => h.includes(col.toLowerCase()))
+          );
+          
+          if (missingRequired.length > 0) {
+            showStatus('error', `Missing required column(s): ${missingRequired.join(', ')}. Please ensure your file has a "Keyword" column.`);
+            return;
+          }
+          
+          // Map column names (case-insensitive matching)
+          const columnMap = {};
+          allColumns.forEach(col => {
+            const matchedHeader = parsedExcelData.headers.find(h => 
+              h.toLowerCase().includes(col.toLowerCase())
+            );
+            if (matchedHeader) {
+              columnMap[col] = matchedHeader;
+            }
+          });
+          
+          // Normalize the data using the column mapping
+          const normalizedData = parsedExcelData.data.map(row => {
+            const normalized = {};
+            Object.keys(columnMap).forEach(key => {
+              const headerName = columnMap[key];
+              normalized[key] = row[headerName] || '';
+            });
+            return normalized;
+          }).filter(row => row.keyword && row.keyword.trim()); // Filter out rows without keywords
+          
+          if (normalizedData.length === 0) {
+            showStatus('error', 'No valid data found in the file. Please check that you have keywords in the correct column.');
+            return;
+          }
+          
+          // Update parsed data with normalized version
+          parsedExcelData.normalizedData = normalizedData;
+          parsedExcelData.columnMap = columnMap;
+          
+          // Show preview
+          displayExcelPreview(parsedExcelData);
+          
+        } catch (error) {
+          console.error('Error parsing file:', error);
+          showStatus('error', 'Error reading file: ' + error.message);
+        }
+      };
+      
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsBinaryString(file);
+      }
+    });
+  }
+
+  // Function to display Excel preview
+  function displayExcelPreview(data) {
+    const previewDiv = document.getElementById('excelPreview');
+    const headerElement = document.getElementById('excelPreviewHeader');
+    const bodyElement = document.getElementById('excelPreviewBody');
+    
+    if (!previewDiv || !headerElement || !bodyElement) return;
+    
+    // Clear previous content
+    headerElement.innerHTML = '';
+    bodyElement.innerHTML = '';
+    
+    // Show preview
+    previewDiv.classList.remove('d-none');
+    
+    // Create header row
+    const headerRow = document.createElement('tr');
+    const displayHeaders = ['Keyword', 'Category', 'Interests'];
+    displayHeaders.forEach(header => {
+      const th = document.createElement('th');
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+    headerElement.appendChild(headerRow);
+    
+    // Create data rows (show first 5 rows)
+    const previewData = data.normalizedData.slice(0, 5);
+    previewData.forEach(row => {
+      const tr = document.createElement('tr');
+      
+      // Keyword column
+      const keywordTd = document.createElement('td');
+      keywordTd.textContent = row.keyword || '';
+      tr.appendChild(keywordTd);
+      
+      // Category column
+      const categoryTd = document.createElement('td');
+      categoryTd.textContent = row.category || '';
+      tr.appendChild(categoryTd);
+      
+      // Interests column
+      const interestsTd = document.createElement('td');
+      const interests = row.interests || '';
+      interestsTd.textContent = interests.length > 30 ? interests.substring(0, 27) + '...' : interests;
+      if (interests.length > 30) {
+        interestsTd.title = interests;
+      }
+      tr.appendChild(interestsTd);
+      
+      bodyElement.appendChild(tr);
+    });
+    
+    // Show count information
+    showStatus('success', `File parsed successfully! Found ${data.normalizedData.length} keywords. Preview shows first 5 rows.`);
+  }
+
+  // Function to handle Excel tab submission
+  function handleExcelTabSubmission() {
+    if (!parsedExcelData || !parsedExcelData.normalizedData) {
+      showStatus('error', 'Please upload and preview an Excel file first.');
+      return null;
+    }
+    
+    const defaultCategory = document.getElementById('defaultCategory').value;
+    const defaultInterests = document.getElementById('defaultInterests').value;
+    
+    // Process the normalized data
+    const keywordsToAdd = parsedExcelData.normalizedData.map(row => ({
+      keyword: row.keyword.trim(),
+      category: row.category && row.category.trim() ? row.category.trim() : defaultCategory,
+      interests: row.interests && row.interests.trim() ? row.interests.trim() : defaultInterests
+    }));
+    
+    return {
+      keywords: keywordsToAdd
+    };
+  }
+
+  // Add Keywords form submission
+  const addKeywordsForm = document.getElementById('addKeywordsForm');
+  if (addKeywordsForm) {
+    addKeywordsForm.addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      // Show loading state
+      const addBtn = document.getElementById('addBtn');
+      if (addBtn) {
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+      }
+      
+      // Get form data based on the current active tab
+      let formData;
+      const activeTab = getCurrentActiveTab();
+      
+      if (activeTab === 'manual-tab') {
+        // Process manual entry
+        const keywords = document.getElementById('keywords').value.trim();
+        const defaultCategory = document.getElementById('defaultCategory').value;
+        const defaultInterests = document.getElementById('defaultInterests').value;
+        
+        if (!keywords) {
+          showStatus('error', 'Please enter at least one keyword.');
+          if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.innerHTML = 'Add Keywords';
+          }
+          return;
+        }
+        
+        // Split keywords by line
+        const keywordsList = keywords.split('\n')
+          .map(k => k.trim())
+          .filter(k => k);
+          
+        // Prepare data
+        formData = {
+          keywords: keywordsList.map(keyword => ({
+            keyword,
+            category: defaultCategory,
+            interests: defaultInterests
+          }))
+        };
+        
+      } else if (activeTab === 'excel-tab') {
+        // Process Excel upload
+        formData = handleExcelTabSubmission();
+        if (!formData) {
+          if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.innerHTML = 'Add Keywords';
+          }
+          return;
+        }
+        
+      } else if (activeTab === 'pinclicks-tab') {
+        // Use analyzed PinClicks data
+        if (!analyzedPinclicksData) {
+          showStatus('error', 'Please analyze the CSV file first.');
+          if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.innerHTML = 'Add Keywords';
+          }
+          return;
+        }
+        
+        formData = {
+          keywords: [analyzedPinclicksData]
+        };
+      }
+      
+      // Submit via AJAX
+      fetch('/api/keywords/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showStatus('success', data.message || `Successfully added ${formData.keywords.length} keywords!`);
+          
+          // Reset the form and clear parsed data
+          addKeywordsForm.reset();
+          parsedExcelData = null;
+          document.getElementById('excelPreview').classList.add('d-none');
+          
+          // Reload the page after a short delay
+          setTimeout(() => {
+            window.location.href = '/keywords';
+          }, 1500);
+        } else {
+          throw new Error(data.message || 'Failed to add keywords');
+        }
+      })
+      .catch(error => {
+        console.error('Error adding keywords:', error);
+        showStatus('error', error.message || 'An unknown error occurred');
+      })
+      .finally(() => {
+        // Reset button state
+        if (addBtn) {
+          addBtn.disabled = false;
+          addBtn.innerHTML = 'Add Keywords';
+        }
+      });
+    });
+  }
+  
+  // Run initial checks and formatting
+  checkImageStatus();
+  formatDates();
+  sortRowsByDate();
+  
+  // Set up periodic refresh for image status
+  setInterval(checkImageStatus, 30000); // Check every 30 seconds
+  
+  // Initialize counts
+  updateSelectedCount();
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/index.min.js"></script>

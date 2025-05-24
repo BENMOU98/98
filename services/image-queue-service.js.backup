@@ -1,0 +1,444 @@
+// services/image-queue-service.js
+const { runQuery, getOne, getAll } = require('../db');
+const { v4: uuidv4 } = require('uuid');
+
+class ImageQueueService {
+  constructor() {
+    this.isProcessing = false;
+    this.maxConcurrentJobs = 1; // Only allow 1 Midjourney job at a time
+    this.currentJobs = 0;
+    this.retryDelay = 30000; // 30 seconds retry delay
+    this.jobDelay = 12000; // 12 seconds between jobs
+    
+    // Initialize the queue table
+    this.initializeTable();
+  }
+
+  async initializeTable() {
+    try {
+      await runQuery(`
+        CREATE TABLE IF NOT EXISTS image_queue (
+          id TEXT PRIMARY KEY,
+          recipe_id INTEGER NOT NULL,
+          user_id TEXT NOT NULL,
+          organization_id TEXT NOT NULL,
+          website_id TEXT,
+          status TEXT DEFAULT 'queued',
+          position INTEGER,
+          custom_prompt TEXT,
+          discord_settings TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          started_at DATETIME,
+          completed_at DATETIME,
+          error_message TEXT,
+          retry_count INTEGER DEFAULT 0,
+          estimated_completion DATETIME
+        )
+      `);
+      
+      console.log('✅ Image queue table initialized');
+    } catch (error) {
+      console.error('❌ Error initializing image queue table:', error);
+    }
+  }
+
+  async addToQueue(jobData) {
+    try {
+      const jobId = uuidv4();
+      const position = await this.getNextQueuePosition();
+      const estimatedCompletion = this.calculateEstimatedCompletion(position);
+      
+      await runQuery(`
+        INSERT INTO image_queue (
+          id, recipe_id, user_id, organization_id, website_id, 
+          status, position, custom_prompt, discord_settings, estimated_completion
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        jobId,
+        jobData.recipeId,
+        jobData.userId,
+        jobData.organizationId,
+        jobData.websiteId || null,
+        'queued',
+        position,
+        jobData.customPrompt || null,
+        jobData.discordSettings ? JSON.stringify(jobData.discordSettings) : null,
+        estimatedCompletion
+      ]);
+
+      console.log(`📋 Added job ${jobId} to queue at position ${position}`);
+      
+      // Start processing if not already running
+      if (!this.isProcessing) {
+        this.startProcessing();
+      }
+
+      return {
+        jobId: jobId,
+        position: position,
+        estimatedCompletion: estimatedCompletion,
+        queueLength: position
+      };
+    } catch (error) {
+      console.error('❌ Error adding job to queue:', error);
+      throw error;
+    }
+  }
+
+  async getNextQueuePosition() {
+    try {
+      const result = await getOne(`
+        SELECT MAX(position) as max_position 
+        FROM image_queue 
+        WHERE status IN ('queued', 'processing')
+      `);
+      
+      return (result?.max_position || 0) + 1;
+    } catch (error) {
+      console.error('Error getting next queue position:', error);
+      return 1;
+    }
+  }
+
+  calculateEstimatedCompletion(position) {
+    const avgJobTime = 90000; // 90 seconds average per job
+    const estimatedMs = position * avgJobTime;
+    return new Date(Date.now() + estimatedMs).toISOString();
+  }
+
+  async startProcessing() {
+    if (this.isProcessing) {
+      console.log('⚠️ Queue processing already running');
+      return;
+    }
+
+    this.isProcessing = true;
+    console.log('🚀 Starting image queue processing');
+
+    try {
+      while (await this.hasQueuedJobs()) {
+        if (this.currentJobs >= this.maxConcurrentJobs) {
+          console.log(`⏳ Max concurrent jobs reached (${this.currentJobs}/${this.maxConcurrentJobs}), waiting...`);
+          await this.wait(5000);
+          continue;
+        }
+
+        const nextJob = await this.getNextJob();
+        if (!nextJob) {
+          await this.wait(2000);
+          continue;
+        }
+
+        // Process job without waiting for completion
+        this.processJob(nextJob);
+        
+        // Add delay between job starts
+        await this.wait(this.jobDelay);
+      }
+    } catch (error) {
+      console.error('❌ Error in queue processing:', error);
+    } finally {
+      this.isProcessing = false;
+      console.log('⏹️ Queue processing stopped');
+    }
+  }
+
+  async hasQueuedJobs() {
+    try {
+      const result = await getOne(`
+        SELECT COUNT(*) as count 
+        FROM image_queue 
+        WHERE status = 'queued'
+      `);
+      return result.count > 0;
+    } catch (error) {
+      console.error('Error checking queued jobs:', error);
+      return false;
+    }
+  }
+
+  async getNextJob() {
+    try {
+      return await getOne(`
+        SELECT * FROM image_queue 
+        WHERE status = 'queued' 
+        ORDER BY position ASC 
+        LIMIT 1
+      `);
+    } catch (error) {
+      console.error('Error getting next job:', error);
+      return null;
+    }
+  }
+
+  async processJob(job) {
+    this.currentJobs++;
+    console.log(`🎨 Processing job ${job.id} for recipe ${job.recipe_id} (${this.currentJobs}/${this.maxConcurrentJobs})`);
+
+    try {
+      // Update job status to processing
+      await this.updateJobStatus(job.id, 'processing', {
+        started_at: new Date().toISOString()
+      });
+
+      // Get the image generator
+      const imageGenerator = require('../midjourney/image-generator');
+      
+      // Parse Discord settings if available
+      let discordSettings = null;
+      if (job.discord_settings) {
+        try {
+          discordSettings = JSON.parse(job.discord_settings);
+        } catch (e) {
+          console.warn('Could not parse Discord settings for job:', job.id);
+        }
+      }
+
+      // Generate the image
+      let result;
+      if (job.custom_prompt) {
+        result = await imageGenerator.generateImageForRecipeWithPrompt(
+          job.recipe_id, 
+          job.custom_prompt
+        );
+      } else {
+        result = await imageGenerator.generateImageForRecipeWithSettings(
+          job.recipe_id, 
+          discordSettings
+        );
+      }
+
+      if (result.success) {
+        await this.updateJobStatus(job.id, 'completed', {
+          completed_at: new Date().toISOString()
+        });
+        console.log(`✅ Job ${job.id} completed successfully`);
+      } else {
+        throw new Error(result.error || 'Image generation failed');
+      }
+
+    } catch (error) {
+      console.error(`❌ Job ${job.id} failed:`, error.message);
+      
+      // Check if it's a concurrent job limit error
+      if (error.message.includes('maximum allowed number of concurrent jobs') || 
+          error.message.includes('concurrent jobs')) {
+        
+        console.log(`🔄 Concurrent job limit hit, requeueing job ${job.id}`);
+        await this.requeueJob(job);
+      } else {
+        // Handle other errors with retry logic
+        await this.handleFailedJob(job, error.message);
+      }
+    } finally {
+      this.currentJobs--;
+    }
+  }
+
+  async requeueJob(job) {
+    try {
+      const retryCount = (job.retry_count || 0) + 1;
+      const maxRetries = 3;
+
+      if (retryCount > maxRetries) {
+        await this.updateJobStatus(job.id, 'failed', {
+          error_message: 'Max retries exceeded due to concurrent job limits',
+          retry_count: retryCount
+        });
+        return;
+      }
+
+      // Reset to queued with new position
+      const newPosition = await this.getNextQueuePosition();
+      const newEstimatedCompletion = this.calculateEstimatedCompletion(newPosition);
+      
+      await runQuery(`
+        UPDATE image_queue 
+        SET status = 'queued', 
+            position = ?, 
+            estimated_completion = ?,
+            retry_count = ?,
+            started_at = NULL,
+            error_message = 'Requeued due to concurrent job limit'
+        WHERE id = ?
+      `, [newPosition, newEstimatedCompletion, retryCount, job.id]);
+
+      console.log(`🔄 Job ${job.id} requeued at position ${newPosition} (retry ${retryCount}/${maxRetries})`);
+      
+      // Add extra delay before processing requeued jobs
+      await this.wait(this.retryDelay);
+      
+    } catch (error) {
+      console.error('Error requeueing job:', error);
+      await this.updateJobStatus(job.id, 'failed', {
+        error_message: 'Failed to requeue job: ' + error.message
+      });
+    }
+  }
+
+  async handleFailedJob(job, errorMessage) {
+    try {
+      const retryCount = (job.retry_count || 0) + 1;
+      const maxRetries = 2;
+
+      if (retryCount <= maxRetries) {
+        // Retry the job
+        const newPosition = await this.getNextQueuePosition();
+        const newEstimatedCompletion = this.calculateEstimatedCompletion(newPosition);
+        
+        await runQuery(`
+          UPDATE image_queue 
+          SET status = 'queued', 
+              position = ?, 
+              estimated_completion = ?,
+              retry_count = ?,
+              started_at = NULL,
+              error_message = ?
+          WHERE id = ?
+        `, [newPosition, newEstimatedCompletion, retryCount, `Retry ${retryCount}: ${errorMessage}`, job.id]);
+
+        console.log(`🔄 Job ${job.id} scheduled for retry ${retryCount}/${maxRetries}`);
+      } else {
+        // Mark as failed
+        await this.updateJobStatus(job.id, 'failed', {
+          error_message: errorMessage,
+          retry_count: retryCount
+        });
+        console.log(`❌ Job ${job.id} failed permanently after ${retryCount} attempts`);
+      }
+    } catch (error) {
+      console.error('Error handling failed job:', error);
+    }
+  }
+
+  async updateJobStatus(jobId, status, additionalData = {}) {
+    try {
+      const updateFields = [];
+      const updateValues = [];
+
+      updateFields.push('status = ?');
+      updateValues.push(status);
+
+      if (additionalData.started_at) {
+        updateFields.push('started_at = ?');
+        updateValues.push(additionalData.started_at);
+      }
+
+      if (additionalData.completed_at) {
+        updateFields.push('completed_at = ?');
+        updateValues.push(additionalData.completed_at);
+      }
+
+      if (additionalData.error_message) {
+        updateFields.push('error_message = ?');
+        updateValues.push(additionalData.error_message);
+      }
+
+      if (additionalData.retry_count !== undefined) {
+        updateFields.push('retry_count = ?');
+        updateValues.push(additionalData.retry_count);
+      }
+
+      updateValues.push(jobId);
+
+      await runQuery(`
+        UPDATE image_queue 
+        SET ${updateFields.join(', ')} 
+        WHERE id = ?
+      `, updateValues);
+
+    } catch (error) {
+      console.error('Error updating job status:', error);
+    }
+  }
+
+  async getQueueStatus(userId, organizationId) {
+    try {
+      // Get user's jobs
+      const userJobs = await getAll(`
+        SELECT * FROM image_queue 
+        WHERE user_id = ? AND organization_id = ? 
+        AND status IN ('queued', 'processing')
+        ORDER BY position ASC
+      `, [userId, organizationId]);
+
+      // Get total queue stats
+      const queueStats = await getOne(`
+        SELECT 
+          COUNT(*) as total_queued,
+          COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing,
+          MIN(position) as next_position
+        FROM image_queue 
+        WHERE status IN ('queued', 'processing')
+      `);
+
+      return {
+        userJobs: userJobs.map(job => ({
+          id: job.id,
+          recipeId: job.recipe_id,
+          status: job.status,
+          position: job.position,
+          estimatedCompletion: job.estimated_completion,
+          retryCount: job.retry_count || 0,
+          errorMessage: job.error_message
+        })),
+        queueStats: {
+          totalQueued: queueStats?.total_queued || 0,
+          processing: queueStats?.processing || 0,
+          nextPosition: queueStats?.next_position || 1
+        }
+      };
+    } catch (error) {
+      console.error('Error getting queue status:', error);
+      return { userJobs: [], queueStats: { totalQueued: 0, processing: 0, nextPosition: 1 } };
+    }
+  }
+
+  async cancelJob(jobId, userId) {
+    try {
+      const job = await getOne(`
+        SELECT * FROM image_queue 
+        WHERE id = ? AND user_id = ? AND status IN ('queued', 'processing')
+      `, [jobId, userId]);
+
+      if (!job) {
+        return { success: false, message: 'Job not found or cannot be cancelled' };
+      }
+
+      await this.updateJobStatus(jobId, 'cancelled');
+      
+      console.log(`🚫 Job ${jobId} cancelled by user ${userId}`);
+      return { success: true, message: 'Job cancelled successfully' };
+    } catch (error) {
+      console.error('Error cancelling job:', error);
+      return { success: false, message: 'Failed to cancel job' };
+    }
+  }
+
+  async cleanupOldJobs(olderThanDays = 7) {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+      const result = await runQuery(`
+        DELETE FROM image_queue 
+        WHERE status IN ('completed', 'failed', 'cancelled') 
+        AND created_at < ?
+      `, [cutoffDate.toISOString()]);
+
+      console.log(`🧹 Cleaned up ${result.changes || 0} old queue jobs`);
+      return result.changes || 0;
+    } catch (error) {
+      console.error('Error cleaning up old jobs:', error);
+      return 0;
+    }
+  }
+
+  wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// Export singleton instance
+const imageQueueService = new ImageQueueService();
+module.exports = imageQueueService;

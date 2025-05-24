@@ -1,0 +1,488 @@
+<!-- Updated generate-all.ejs template -->
+<div class="row">
+  <!-- Form Section -->
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Recipe Details</h5>
+      </div>
+      <div class="card-body">
+        <form id="generateAllForm">
+          <div class="mb-3">
+            <label for="recipeIdea" class="form-label">Recipe Idea</label>
+            <input type="text" class="form-control" id="recipeIdea" name="recipeIdea" placeholder="Enter a specific dish name (e.g., &quot;beef pasta&quot;, &quot;chocolate cake&quot;). The more specific and well-known the dish name, the better the results." required>
+          </div>
+          <div class="mb-3">
+            <label for="category" class="form-label">Category</label>
+            <select class="form-select" id="category" name="category" required>
+              <option value="">Select a category</option>
+              <option value="Breakfast">Breakfast</option>
+              <option value="Lunch">Lunch</option>
+              <option value="Dinner">Dinner</option>
+              <option value="Dessert">Dessert</option>
+              <option value="Appetizers">Appetizers</option>
+              <option value="Soups">Soups</option>
+              <option value="Salads">Salads</option>
+              <option value="Vegan">Vegan</option>
+              <option value="Vegetarian">Vegetarian</option>
+              <option value="Gluten-Free">Gluten-Free</option>
+              <option value="Low-Carb">Low-Carb</option>
+              <option value="Keto">Keto</option>
+              <option value="Paleo">Paleo</option>
+              <option value="Quick & Easy">Quick & Easy</option>
+              <option value="Budget-Friendly">Budget-Friendly</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="interests" class="form-label">Target Audience Interests</label>
+            <input type="text" class="form-control" id="interests" name="interests" placeholder="e.g. healthy eating, easy recipes, home cooking" value="healthy eating, easy recipes, home cooking">
+          </div>
+          <!-- Hidden input to store recipe ID -->
+          <input type="hidden" id="recipeId" name="recipeId" value="">
+          <div id="pinterestVariationsContainer" class="mb-3 d-none">
+            <label for="pinterestVariation" class="form-label">Select Pinterest Variation for Blog</label>
+            <select class="form-select" id="pinterestVariation" name="pinterestVariation">
+              <!-- Options will be added dynamically -->
+            </select>
+            <div class="mt-2">
+              <button type="button" id="generateBlogBtn" class="btn btn-success">Generate Blog with Selected Variation</button>
+            </div>
+          </div>
+          <button type="submit" id="generateBtn" class="btn btn-primary">Generate All Content</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Status Section -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Status</h5>
+      </div>
+      <div class="card-body">
+        <div id="statusMessage"></div>
+        <div id="generationProgress" class="d-none">
+          <div class="progress mb-3">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <p id="progressText" class="text-center">Starting generation...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results Section (hidden initially) -->
+<div id="resultsSection" class="row mt-4 d-none">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Results</h5>
+        <a id="viewRecipeLink" href="#" class="btn btn-light">View Complete Recipe</a>
+      </div>
+      <div class="card-body">
+        <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pinterest-tab" data-bs-toggle="tab" data-bs-target="#pinterest" type="button" role="tab" aria-controls="pinterest" aria-selected="true">Pinterest</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="blog-tab" data-bs-toggle="tab" data-bs-target="#blog" type="button" role="tab" aria-controls="blog" aria-selected="false">Blog Post</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="facebook-tab" data-bs-toggle="tab" data-bs-target="#facebook" type="button" role="tab" aria-controls="facebook" aria-selected="false">Facebook</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="midjourney-tab" data-bs-toggle="tab" data-bs-target="#midjourney" type="button" role="tab" aria-controls="midjourney" aria-selected="false">Midjourney</button>
+          </li>
+        </ul>
+        <div class="tab-content p-3" id="resultTabsContent">
+          <!-- Pinterest Tab -->
+          <div class="tab-pane fade show active" id="pinterest" role="tabpanel" aria-labelledby="pinterest-tab">
+            <div id="pinterestVariations"></div>
+          </div>
+          
+          <!-- Blog Tab -->
+          <div class="tab-pane fade" id="blog" role="tabpanel" aria-labelledby="blog-tab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="blogContent">
+                <i class="bi bi-copy"></i> Copy HTML
+              </button>
+            </div>
+            <div id="blogPreview"></div>
+            <div id="blogContent" class="d-none"></div>
+          </div>
+          
+          <!-- Facebook Tab -->
+          <div class="tab-pane fade" id="facebook" role="tabpanel" aria-labelledby="facebook-tab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="facebookContent">
+                <i class="bi bi-copy"></i> Copy
+              </button>
+            </div>
+            <pre id="facebookContent"></pre>
+          </div>
+          
+          <!-- Midjourney Tab -->
+          <div class="tab-pane fade" id="midjourney" role="tabpanel" aria-labelledby="midjourney-tab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="midjourneyContent">
+                <i class="bi bi-copy"></i> Copy
+              </button>
+            </div>
+            <pre id="midjourneyContent"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const generateAllForm = document.getElementById('generateAllForm');
+    const generateBtn = document.getElementById('generateBtn');
+    const statusMessage = document.getElementById('statusMessage');
+    const generationProgress = document.getElementById('generationProgress');
+    const progressBar = document.querySelector('.progress-bar');
+    const progressText = document.getElementById('progressText');
+    const resultsSection = document.getElementById('resultsSection');
+    const pinterestVariations = document.getElementById('pinterestVariations');
+    const blogPreview = document.getElementById('blogPreview');
+    const blogContent = document.getElementById('blogContent');
+    const facebookContent = document.getElementById('facebookContent');
+    const midjourneyContent = document.getElementById('midjourneyContent');
+    const viewRecipeLink = document.getElementById('viewRecipeLink');
+    const pinterestVariationsContainer = document.getElementById('pinterestVariationsContainer');
+    const pinterestVariation = document.getElementById('pinterestVariation');
+    const generateBlogBtn = document.getElementById('generateBlogBtn');
+    const recipeIdInput = document.getElementById('recipeId');
+    
+    // Store state
+    let recipeId = null;
+    let allPinterestVariations = [];
+    
+    // Form submission
+    generateAllForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const recipeIdea = document.getElementById('recipeIdea').value.trim();
+      const category = document.getElementById('category').value;
+      const interests = document.getElementById('interests').value;
+      
+      if (!recipeIdea) {
+        showStatus('error', 'Please enter a recipe idea.');
+        return;
+      }
+      
+      if (!category) {
+        showStatus('error', 'Please select a category.');
+        return;
+      }
+      
+      // Reset state
+      recipeId = null;
+      allPinterestVariations = [];
+      
+      // Show loading state
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+      showStatus('info', 'Starting generation process...');
+      generationProgress.classList.remove('d-none');
+      resultsSection.classList.add('d-none');
+      pinterestVariationsContainer.classList.add('d-none');
+      
+      // Reset progress bar
+      updateProgress(10, 'Generating Facebook content...');
+      
+      try {
+        // Generate all content
+        const response = await fetch('/api/generate/all', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            recipeIdea, 
+            category, 
+            interests
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Save recipe ID
+          recipeId = data.recipeId || '';
+          
+          // Update hidden recipeId input
+          if (recipeIdInput) {
+            recipeIdInput.value = recipeId;
+          }
+          
+          // Set the view complete recipe link
+          if (recipeId) {
+            viewRecipeLink.href = `/recipe/${recipeId}`;
+            viewRecipeLink.classList.remove('d-none');
+          } else {
+            viewRecipeLink.classList.add('d-none');
+          }
+          
+          // Update progress
+          updateProgress(60, 'Processing Pinterest variations...');
+          
+          // Display Pinterest variations
+          if (data.data && data.data.pinterest && data.data.pinterest.length > 0) {
+            allPinterestVariations = data.data.pinterest;
+            
+            let pinterestHtml = '<div class="accordion" id="pinterestAccordion">';
+            
+            allPinterestVariations.forEach((variation, i) => {
+              // Check if properties exist and use defaults if they don't
+              const pinTitle = variation.pinTitle || 'No title available';
+              const pinDesc = variation.pinDesc || '';
+              const overlay = variation.overlay || '';
+              const metaTitle = variation.metaTitle || '';
+              const metaDesc = variation.metaDesc || '';
+              const metaSlug = variation.metaSlug || '';
+              
+              pinterestHtml += `
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="heading${i}">
+                    <button class="accordion-button ${i > 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${i}" aria-expanded="${i === 0 ? 'true' : 'false'}" aria-controls="collapse${i}">
+                      Variation ${i + 1}: ${pinTitle}
+                    </button>
+                  </h2>
+                  <div id="collapse${i}" class="accordion-collapse collapse ${i === 0 ? 'show' : ''}" aria-labelledby="heading${i}" data-bs-parent="#pinterestAccordion">
+                    <div class="accordion-body">
+                      <div class="row">
+                        <div class="col-md-9">
+                          <div class="mb-3">
+                            <strong>Pin Title:</strong>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <p class="mb-0">${pinTitle}</p>
+                              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="pintitle-${i}">
+                                <i class="bi bi-copy"></i>
+                              </button>
+                            </div>
+                            <span id="pintitle-${i}" class="d-none">${pinTitle}</span>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Pin Description:</strong>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <p class="mb-0">${pinDesc}</p>
+                              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="pindesc-${i}">
+                                <i class="bi bi-copy"></i>
+                              </button>
+                            </div>
+                            <span id="pindesc-${i}" class="d-none">${pinDesc}</span>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Overlay Text:</strong>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <p class="mb-0">${overlay}</p>
+                              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="overlay-${i}">
+                                <i class="bi bi-copy"></i>
+                              </button>
+                            </div>
+                            <span id="overlay-${i}" class="d-none">${overlay}</span>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Meta Title:</strong>
+                            <p>${metaTitle}</p>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Meta Description:</strong>
+                            <p>${metaDesc}</p>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>URL Slug:</strong>
+                            <p>${metaSlug}</p>
+                          </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                          <button class="btn btn-success w-100 generate-blog-btn" data-variation-index="${i}">
+                            <i class="bi bi-magic"></i> Generate Blog with This Variation
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+            
+            pinterestHtml += '</div>';
+            pinterestVariations.innerHTML = pinterestHtml;
+            
+            // Populate the dropdown for Pinterest variations
+            pinterestVariation.innerHTML = '';
+            allPinterestVariations.forEach((variation, i) => {
+              const option = document.createElement('option');
+              option.value = i;
+              option.textContent = `Variation ${i + 1}: ${variation.pinTitle}`;
+              pinterestVariation.appendChild(option);
+            });
+            
+            pinterestVariationsContainer.classList.remove('d-none');
+          } else {
+            pinterestVariations.innerHTML = '<div class="alert alert-warning">No Pinterest variations were generated.</div>';
+          }
+          
+          updateProgress(80, 'Processing Facebook and Blog content...');
+          
+          // Display Blog content
+          if (data.data && data.data.blog) {
+            blogPreview.innerHTML = data.data.blog;
+            blogContent.textContent = data.data.blog;
+          } else {
+            blogPreview.innerHTML = '<div class="alert alert-info">No blog content was generated yet. Click "Generate Blog with This Variation" on any Pinterest variation to create a blog post.</div>';
+          }
+          
+          // Display Facebook content
+          if (data.data && data.data.facebook) {
+            facebookContent.textContent = data.data.facebook.recipe || 'No recipe content available';
+          } else {
+            facebookContent.textContent = 'No Facebook content was generated.';
+          }
+          
+          // Display Midjourney content
+          if (data.data && data.data.facebook && data.data.facebook.mjPrompt) {
+            midjourneyContent.textContent = data.data.facebook.mjPrompt;
+          } else {
+            midjourneyContent.textContent = 'No Midjourney prompt was generated.';
+          }
+          
+          updateProgress(100, 'All content generated successfully!');
+          resultsSection.classList.remove('d-none');
+          showStatus('success', 'All content generated successfully!');
+        } else {
+          throw new Error(data.message || 'Failed to generate content');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus('error', `An error occurred: ${error.message}`);
+        generationProgress.classList.add('d-none');
+      } finally {
+        // Reset button state
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = 'Generate All Content';
+      }
+    });
+    
+    // Generate blog button click handler - using the fixed ID
+    generateBlogBtn.addEventListener('click', function() {
+      const selectedIndex = parseInt(pinterestVariation.value);
+      if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= allPinterestVariations.length) {
+        showStatus('error', 'Please select a valid Pinterest variation.');
+        return;
+      }
+      
+      generateBlogFromVariation(selectedIndex);
+    });
+    
+    // Event delegation for dynamic content - Only for generate-blog-btn
+    // We removed the copy button handling as it's now in main.js
+    document.addEventListener('click', function(e) {
+      // Generate blog from variation button
+      if (e.target.closest('.generate-blog-btn')) {
+        const button = e.target.closest('.generate-blog-btn');
+        const variationIndex = parseInt(button.getAttribute('data-variation-index'));
+        
+        if (isNaN(variationIndex)) {
+          showStatus('error', 'Invalid variation index.');
+          return;
+        }
+        
+        generateBlogFromVariation(variationIndex, button);
+      }
+    });
+    
+    // Function to generate blog from Pinterest variation
+    async function generateBlogFromVariation(variationIndex, buttonElement = null) {
+      if (!recipeId) {
+        showStatus('error', 'Recipe ID is missing. Please generate content first.');
+        return;
+      }
+      
+      // Get the variation
+      const variation = allPinterestVariations[variationIndex];
+      if (!variation) {
+        showStatus('error', 'Selected variation not found.');
+        return;
+      }
+      
+      // Track the button element that was clicked (if any)
+      const button = buttonElement || generateBlogBtn;
+      const originalHTML = button.innerHTML;
+      
+      // Update UI
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+      showStatus('info', 'Generating blog post from selected variation...');
+      
+      try {
+        // Call the API to generate blog from this variation
+        const response = await fetch('/api/generate/blog-from-variation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            recipeId: recipeId,
+            variationId: variation.id || variationIndex.toString()
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update blog preview
+          blogPreview.innerHTML = data.blogContent;
+          blogContent.textContent = data.blogContent;
+          
+          // Switch to blog tab
+          document.getElementById('blog-tab').click();
+          
+          showStatus('success', 'Blog post generated successfully!');
+        } else {
+          throw new Error(data.message || 'Failed to generate blog post');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus('error', `Failed to generate blog post: ${error.message}`);
+      } finally {
+        // Reset button state
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+      }
+    }
+    
+    // Helper function to update progress bar
+    function updateProgress(percentage, message) {
+      progressBar.style.width = `${percentage}%`;
+      progressBar.setAttribute('aria-valuenow', percentage);
+      progressText.textContent = message;
+    }
+    
+    // Helper function to show status messages
+    function showStatus(type, message) {
+      let alertClass = 'alert-info';
+      if (type === 'error') alertClass = 'alert-danger';
+      if (type === 'success') alertClass = 'alert-success';
+      
+      statusMessage.innerHTML = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+          ${message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      `;
+    }
+  });
+</script>

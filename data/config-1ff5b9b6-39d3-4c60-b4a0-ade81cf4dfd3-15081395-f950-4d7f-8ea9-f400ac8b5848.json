@@ -1,0 +1,26 @@
+{
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 0.7,
+  "apiKey": "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",
+  "language": "English",
+  "pinCount": 10,
+  "prompts": {
+    "pinTitleSystem": "Hihi",
+    "pinTitleUser": "",
+    "pinDescSystem": "",
+    "pinDescUser": "",
+    "pinOverlaySystem": "",
+    "pinOverlayUser": "",
+    "metaTitleSystem": "",
+    "metaTitleUser": "",
+    "metaDescSystem": "",
+    "metaDescUser": "",
+    "slugSystemPrompt": "",
+    "slugUserPrompt": "",
+    "blogpostSystemPrompt": "",
+    "blogpostUserPrompt": "",
+    "fbPrompt": "Create a complete recipe for {{recipeIdea}} in {{language}}. Include:\r\n1. An emoji and title at the beginning\r\n2. A brief introduction (2-3 sentences)\r\n3. Ingredients section with emoji 🧂 and ingredients listed with bullet points\r\n4. Preparation section with emoji 🧑‍🍳 and numbered steps\r\n5. A cooking tip at the end\r\n\r\nBe detailed but concise, and ensure the recipe is delicious and practical.",
+    "mjTemplate": "Professional food photography of {{title}}, ingredients include {{ingredients}}, photo taken with a Canon EOS R5, 85mm lens, f/2.8, natural lighting, food styling, shallow depth of field, mouth-watering, magazine quality, top view, soft shadows, textured wood or marble background, garnished beautifully",
+    "fbCaptionPrompt": "Create an engaging Facebook post caption for this recipe in {{language}}. The caption should be conversational, include 2-3 emojis, ask an engaging question, and invite comments. Keep it under 150 words and make sure it entices people to try the recipe. Here's the recipe:\r\n\r\n{{recipe}}"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 0.7,
+  "apiKey": "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",
+  "language": "English",
+  "pinCount": 2,
+  "prompts": {
+    "pinTitleSystem": "",
+    "pinTitleUser": "",
+    "pinDescSystem": "",
+    "pinDescUser": "",
+    "pinOverlaySystem": "",
+    "pinOverlayUser": "",
+    "metaTitleSystem": "",
+    "metaTitleUser": "",
+    "metaDescSystem": "",
+    "metaDescUser": "",
+    "slugSystemPrompt": "",
+    "slugUserPrompt": "",
+    "blogpostSystemPrompt": "",
+    "blogpostUserPrompt": "",
+    "fbPrompt": "Instructions:\r\n- Use the format below without adding, removing, or changing the order of sections, headings, or emojis.\r\n- Each instruction step must begin with a number followed by a dash (e.g., 1-), and use clear, concise language. Do not include any empty lines between steps.\r\n- Write only plain text (no markdown or special characters).\r\n- Exclude any haram ingredients (pork, bacon, wine, etc.) and replace them silently with halal-friendly alternatives (e.g., pork → beef/chicken, wine → grape juice).\r\n- Do not mention substitutions or the word \"halal.\"\r\n- Title must be short, engaging, SEO-friendly, and include relevant emojis.\r\n\r\nNow generate a recipe for the dish called \"{recipe_input}\" in {language}, using this exact template:\r\n\r\n[Catchy, SEO-optimized recipe title with emojis in the end]\r\n\r\nIngredients 🧂\r\n\r\n- [Ingredient 1]\r\n- [Ingredient 2]\r\n- [Ingredient 3]\r\n...\r\n\r\nPreparation 🧑‍🍳\r\n\r\n1- [Step 1: Description]\r\n2- [Step 2: Description]\r\n3- [Step 3: Description]\r\n...\r\n\r\nServings: [Number]\r\nPrep Time: [Time]\r\nCook Time: [Time]\r\nTotal Time: [Total Time]\r\n\r\nEnjoy your meal ✨\r\n#Recipe",
+    "mjTemplate": "",
+    "fbCaptionPrompt": ""
+  }
+}

@@ -1,0 +1,84 @@
+<!-- views/wordpress-recipe-settings.ejs -->
+<div class="row">
+  <div class="col-md-8 mx-auto">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">WP Recipe Maker Integration</h5>
+      </div>
+      <div class="card-body">
+        <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <%= errorMessage %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+        
+        <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <%= successMessage %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+
+        <form action="/wordpress-recipe-settings" method="post">
+          <div class="mb-3 form-check form-switch">
+            <input type="checkbox" class="form-check-input" id="enableWPRM" name="enabled" <%= settings && settings.enabled ? 'checked' : '' %>>
+            <label class="form-check-label" for="enableWPRM">Enable WP Recipe Maker Integration</label>
+          </div>
+          
+          <div class="mb-3 form-check form-switch">
+            <input type="checkbox" class="form-check-input" id="addToAll" name="addToAllPosts" <%= settings && settings.addToAllPosts ? 'checked' : '' %>>
+            <label class="form-check-label" for="addToAll">Add Recipe to All Published Posts</label>
+            <div class="form-text">If enabled, recipes will be added to all posts. If disabled, recipes will only be added to posts with matching keywords.</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="keywords" class="form-label">Recipe Keywords (comma separated)</label>
+            <textarea class="form-control" id="keywords" name="keywords" rows="3" placeholder="e.g.: recipe, dinner, meal, cook, bake"><%= settings && settings.keywords ? settings.keywords : '' %></textarea>
+            <div class="form-text">If a post keyword contains any of these terms, a recipe will be added (only if "Add Recipe to All Published Posts" is disabled).</div>
+          </div>
+          
+          <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+            <button type="button" id="testConnectionBtn" class="btn btn-outline-secondary">Test WPRM Connection</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const testConnectionBtn = document.getElementById('testConnectionBtn');
+  
+  testConnectionBtn.addEventListener('click', async function() {
+    testConnectionBtn.disabled = true;
+    testConnectionBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Testing...';
+    
+    try {
+      const response = await fetch('/api/wordpress/test-wprm-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('WP Recipe Maker connection test successful! The plugin is properly installed and accessible.');
+      } else {
+        alert(`Connection failed: ${data.message}. Please make sure the WP Recipe Maker plugin is installed and activated on your WordPress site.`);
+      }
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      alert('Connection test failed. Please check the WP Recipe Maker plugin on your WordPress site.');
+    } finally {
+      testConnectionBtn.disabled = false;
+      testConnectionBtn.innerHTML = 'Test WPRM Connection';
+    }
+  });
+});
+</script>

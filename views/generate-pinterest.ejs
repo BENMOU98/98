@@ -1,0 +1,372 @@
+<!-- Updated generate-pinterest.ejs template -->
+<div class="row">
+  <!-- Form Section -->
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Recipe Details</h5>
+      </div>
+      <div class="card-body">
+        <form id="pinterestForm">
+          <div class="mb-3">
+            <label for="recipeIdea" class="form-label">Recipe Idea</label>
+            <input type="text" class="form-control" id="recipeIdea" name="recipeIdea" placeholder="Enter a specific dish name (e.g., &quot;beef pasta&quot;, &quot;chocolate cake&quot;). The more specific and well-known the dish name, the better the results." required>
+          </div>
+          <div class="mb-3">
+            <label for="category" class="form-label">Category</label>
+            <select class="form-select" id="category" name="category" required>
+              <option value="">Select a category</option>
+              <option value="Breakfast">Breakfast</option>
+              <option value="Lunch">Lunch</option>
+              <option value="Dinner">Dinner</option>
+              <option value="Dessert">Dessert</option>
+              <option value="Appetizers">Appetizers</option>
+              <option value="Soups">Soups</option>
+              <option value="Salads">Salads</option>
+              <option value="Vegan">Vegan</option>
+              <option value="Vegetarian">Vegetarian</option>
+              <option value="Gluten-Free">Gluten-Free</option>
+              <option value="Low-Carb">Low-Carb</option>
+              <option value="Keto">Keto</option>
+              <option value="Paleo">Paleo</option>
+              <option value="Quick & Easy">Quick & Easy</option>
+              <option value="Budget-Friendly">Budget-Friendly</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="interests" class="form-label">Target Audience Interests</label>
+            <input type="text" class="form-control" id="interests" name="interests" placeholder="e.g. healthy eating, easy recipes, home cooking" value="healthy eating, easy recipes, home cooking">
+          </div>
+          <button type="submit" id="generateBtn" class="btn btn-primary">Generate Content</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Status Section -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Status</h5>
+      </div>
+      <div class="card-body">
+        <div id="statusMessage"></div>
+        <div id="generationProgress" class="d-none">
+          <div class="progress mb-3">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <p class="text-center">Generating content... This may take a few minutes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results Section (hidden initially) -->
+<div id="resultsSection" class="row mt-4 d-none">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Results</h5>
+        <a id="viewRecipeLink" href="#" class="btn btn-light">View Complete Recipe</a>
+      </div>
+      <div class="card-body">
+        <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pinterest-tab" data-bs-toggle="tab" data-bs-target="#pinterest" type="button" role="tab" aria-controls="pinterest" aria-selected="true">Pinterest Variations</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="blog-tab" data-bs-toggle="tab" data-bs-target="#blog" type="button" role="tab" aria-controls="blog" aria-selected="false">Blog Post</button>
+          </li>
+        </ul>
+        <div class="tab-content p-3" id="resultTabsContent">
+          <div class="tab-pane fade show active" id="pinterest" role="tabpanel" aria-labelledby="pinterest-tab">
+            <div id="pinterestVariations"></div>
+          </div>
+          <div class="tab-pane fade" id="blog" role="tabpanel" aria-labelledby="blog-tab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="blogContent">
+                <i class="bi bi-copy"></i> Copy HTML
+              </button>
+            </div>
+            <div id="blogPreview"></div>
+            <div id="blogContent" class="d-none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const pinterestForm = document.getElementById('pinterestForm');
+    const generateBtn = document.getElementById('generateBtn');
+    const statusMessage = document.getElementById('statusMessage');
+    const generationProgress = document.getElementById('generationProgress');
+    const resultsSection = document.getElementById('resultsSection');
+    const pinterestVariations = document.getElementById('pinterestVariations');
+    const blogPreview = document.getElementById('blogPreview');
+    const blogContent = document.getElementById('blogContent');
+    const viewRecipeLink = document.getElementById('viewRecipeLink');
+    
+    // Form submission
+    pinterestForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const recipeIdea = document.getElementById('recipeIdea').value.trim();
+      const category = document.getElementById('category').value;
+      const interests = document.getElementById('interests').value;
+      
+      if (!recipeIdea) {
+        showStatus('error', 'Please enter a recipe idea.');
+        return;
+      }
+      
+      if (!category) {
+        showStatus('error', 'Please select a category.');
+        return;
+      }
+      
+      // Show loading state
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+      showStatus('info', 'Generating Pinterest content and blog post...');
+      generationProgress.classList.remove('d-none');
+      resultsSection.classList.add('d-none');
+      
+      try {
+        const response = await fetch('/api/generate/pinterest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            recipeIdea, 
+            category, 
+            interests
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Hide progress and show results
+          generationProgress.classList.add('d-none');
+          resultsSection.classList.remove('d-none');
+          
+          // Save recipeId if provided
+          const recipeId = data.recipeId || '';
+          
+          // Set the view complete recipe link
+          if (recipeId) {
+            viewRecipeLink.href = `/recipe/${recipeId}`;
+            viewRecipeLink.classList.remove('d-none');
+          } else {
+            viewRecipeLink.classList.add('d-none');
+          }
+          
+          // Display Pinterest variations
+          if (data.data && data.data.pinterest && data.data.pinterest.length > 0) {
+            let pinterestHtml = '<div class="accordion" id="pinterestAccordion">';
+            
+            data.data.pinterest.forEach((variation, i) => {
+              // Check if properties exist and use defaults if they don't
+              const pinTitle = variation.pinTitle || 'No title available';
+              const pinDesc = variation.pinDesc || '';
+              const overlay = variation.overlay || '';
+              const metaTitle = variation.metaTitle || '';
+              const metaDesc = variation.metaDesc || '';
+              const metaSlug = variation.metaSlug || '';
+              
+              pinterestHtml += `
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="heading${i}">
+                    <button class="accordion-button ${i > 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${i}" aria-expanded="${i === 0 ? 'true' : 'false'}" aria-controls="collapse${i}">
+                      Variation ${i + 1}: ${pinTitle}
+                    </button>
+                  </h2>
+                  <div id="collapse${i}" class="accordion-collapse collapse ${i === 0 ? 'show' : ''}" aria-labelledby="heading${i}" data-bs-parent="#pinterestAccordion">
+                    <div class="accordion-body">
+                      <div class="row">
+                        <div class="col-md-9">
+                          <div class="mb-3">
+                            <strong>Pin Title:</strong>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <p class="mb-0">${pinTitle}</p>
+                              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="pintitle-${i}">
+                                <i class="bi bi-copy"></i>
+                              </button>
+                            </div>
+                            <span id="pintitle-${i}" class="d-none">${pinTitle}</span>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Pin Description:</strong>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <p class="mb-0">${pinDesc}</p>
+                              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="pindesc-${i}">
+                                <i class="bi bi-copy"></i>
+                              </button>
+                            </div>
+                            <span id="pindesc-${i}" class="d-none">${pinDesc}</span>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Overlay Text:</strong>
+                            <div class="d-flex justify-content-between align-items-center">
+                              <p class="mb-0">${overlay}</p>
+                              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="overlay-${i}">
+                                <i class="bi bi-copy"></i>
+                              </button>
+                            </div>
+                            <span id="overlay-${i}" class="d-none">${overlay}</span>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Meta Title:</strong>
+                            <p>${metaTitle}</p>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>Meta Description:</strong>
+                            <p>${metaDesc}</p>
+                          </div>
+                          
+                          <div class="mb-3">
+                            <strong>URL Slug:</strong>
+                            <p>${metaSlug}</p>
+                          </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                          <button class="btn btn-success w-100 generate-blog-btn" data-recipe-id="${recipeId}" data-variation-id="${i}">
+                            <i class="bi bi-magic"></i> Generate Blog with This Variation
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+            
+            pinterestHtml += '</div>';
+            pinterestVariations.innerHTML = pinterestHtml;
+          } else {
+            pinterestVariations.innerHTML = '<div class="alert alert-warning">No Pinterest variations were generated.</div>';
+          }
+          
+          // Display Blog content
+          if (data.data && data.data.blog) {
+            blogPreview.innerHTML = data.data.blog;
+            blogContent.textContent = data.data.blog;
+          } else {
+            blogPreview.innerHTML = '<div class="alert alert-info">No blog content was generated yet. Click "Generate Blog with This Variation" on any Pinterest variation to create a blog post.</div>';
+          }
+          
+          showStatus('success', 'Content generated successfully!');
+        } else {
+          throw new Error(data.message || 'Failed to generate content');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus('error', `An error occurred: ${error.message}`);
+        generationProgress.classList.add('d-none');
+      } finally {
+        // Reset button state
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = 'Generate Content';
+      }
+    });
+    
+    // Event delegation for dynamic content
+    document.addEventListener('click', function(e) {
+      // Copy button functionality
+      if (e.target.closest('.copy-btn')) {
+        const button = e.target.closest('.copy-btn');
+        const contentId = button.getAttribute('data-content');
+        const content = document.getElementById(contentId).textContent;
+        
+        navigator.clipboard.writeText(content)
+          .then(() => {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+            setTimeout(() => {
+              button.innerHTML = originalHTML;
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text. Please try again.');
+          });
+      }
+      
+      // Generate blog from variation button
+      if (e.target.closest('.generate-blog-btn')) {
+        const button = e.target.closest('.generate-blog-btn');
+        const recipeId = button.getAttribute('data-recipe-id');
+        const variationId = button.getAttribute('data-variation-id');
+        
+        if (!recipeId) {
+          alert('Recipe ID is missing. Please try again.');
+          return;
+        }
+        
+        const originalHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+        
+        // Call the API to generate blog from this variation
+        fetch('/api/generate/blog-from-variation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            recipeId: recipeId,
+            variationId: variationId
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Update blog preview
+            blogPreview.innerHTML = data.blogContent;
+            blogContent.textContent = data.blogContent;
+            
+            // Switch to blog tab
+            document.getElementById('blog-tab').click();
+            
+            showStatus('success', 'Blog post generated successfully!');
+          } else {
+            throw new Error(data.message || 'Failed to generate blog post');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showStatus('error', `Failed to generate blog post: ${error.message}`);
+        })
+        .finally(() => {
+          // Reset button state
+          button.disabled = false;
+          button.innerHTML = originalHTML;
+        });
+      }
+    });
+    
+    // Helper function to show status messages
+    function showStatus(type, message) {
+      let alertClass = 'alert-info';
+      if (type === 'error') alertClass = 'alert-danger';
+      if (type === 'success') alertClass = 'alert-success';
+      
+      statusMessage.innerHTML = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+          ${message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      `;
+    }
+  });
+</script>

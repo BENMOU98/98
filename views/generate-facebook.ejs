@@ -1,0 +1,373 @@
+<!-- Updated generate-facebook.ejs template -->
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Recipe Details</h5>
+      </div>
+      <div class="card-body">
+        <form id="facebookForm" class="mt-3">
+          <div class="mb-3">
+            <label for="recipeIdea" class="form-label">Recipe Idea</label>
+            <input type="text" class="form-control" id="recipeIdea" name="recipeIdea" placeholder="Enter a specific dish name (e.g., &quot;beef pasta&quot;, &quot;chocolate cake&quot;). The more specific and well-known the dish name, the better the results." required>
+          </div>
+          <button type="submit" class="btn btn-primary" id="generateBtn">Generate Content</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Status</h5>
+      </div>
+      <div class="card-body">
+        <div id="statusMessage"></div>
+        <div id="generationProgress" class="d-none">
+          <div class="progress mb-3">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <p class="text-center">Generating content... This may take a minute.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4" id="resultsSection" style="display: none;">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Results</h5>
+        <a id="viewRecipeLink" href="#" class="btn btn-light">View Complete Recipe</a>
+      </div>
+      <div class="card-body">
+        <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="recipe-tab" data-bs-toggle="tab" data-bs-target="#recipe" type="button" role="tab" aria-controls="recipe" aria-selected="true">Recipe</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="fbcaption-tab" data-bs-toggle="tab" data-bs-target="#fbcaption" type="button" role="tab" aria-controls="fbcaption" aria-selected="false">Facebook Caption</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="mjprompt-tab" data-bs-toggle="tab" data-bs-target="#mjprompt" type="button" role="tab" aria-controls="mjprompt" aria-selected="false">Midjourney Prompt</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="image-tab" data-bs-toggle="tab" data-bs-target="#image" type="button" role="tab" aria-controls="image" aria-selected="false">Recipe Image</button>
+          </li>
+        </ul>
+        <div class="tab-content p-3" id="resultTabsContent">
+          <div class="tab-pane fade show active" id="recipe" role="tabpanel" aria-labelledby="recipe-tab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="recipeContent">
+                <i class="bi bi-copy"></i> Copy
+              </button>
+            </div>
+            <pre id="recipeContent"></pre>
+          </div>
+          <div class="tab-pane fade" id="fbcaption" role="tabpanel" aria-labelledby="fbcaption-tab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="fbCaptionContent">
+                <i class="bi bi-copy"></i> Copy
+              </button>
+            </div>
+            <pre id="fbCaptionContent"></pre>
+          </div>
+          <div class="tab-pane fade" id="mjprompt" role="tabpanel" aria-labelledby="mjprompt-tab">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-sm btn-outline-primary copy-btn" data-content="mjPromptContent">
+                <i class="bi bi-copy"></i> Copy
+              </button>
+            </div>
+            <pre id="mjPromptContent"></pre>
+          </div>
+          <div class="tab-pane fade" id="image" role="tabpanel" aria-labelledby="image-tab">
+            <div id="image-generation-status" class="alert alert-info">
+              Recipe image will be generated automatically
+            </div>
+            <div id="generated-image-container" class="text-center">
+              <!-- Image will be displayed here -->
+            </div>
+            <div class="mt-3 text-center" id="regenerate-image-container" style="display: none;">
+              <button id="regenerateImageBtn" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i> Regenerate Image
+              </button>
+            </div>
+          </div>
+          <div class="tab-pane fade" id="files" role="tabpanel" aria-labelledby="files-tab">
+            <div id="filesContent">
+              <h5>Output Files</h5>
+              <ul id="filesList" class="list-group"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const facebookForm = document.getElementById('facebookForm');
+    const generateBtn = document.getElementById('generateBtn');
+    const statusMessage = document.getElementById('statusMessage');
+    const generationProgress = document.getElementById('generationProgress');
+    const resultsSection = document.getElementById('resultsSection');
+    const recipeContent = document.getElementById('recipeContent');
+    const fbCaptionContent = document.getElementById('fbCaptionContent');
+    const mjPromptContent = document.getElementById('mjPromptContent');
+    const viewRecipeLink = document.getElementById('viewRecipeLink');
+    const filesList = document.getElementById('filesList');
+    const regenerateImageBtn = document.getElementById('regenerateImageBtn');
+    
+    let currentRecipeId = null;
+    
+    // Form submission
+    facebookForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const recipeIdea = document.getElementById('recipeIdea').value.trim();
+      
+      if (!recipeIdea) {
+        showStatus('error', 'Please enter a recipe idea.');
+        return;
+      }
+      
+      // Show loading state
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+      showStatus('info', 'Generating Facebook content...');
+      generationProgress.classList.remove('d-none');
+      resultsSection.style.display = 'none';
+      
+      try {
+        const response = await fetch('/api/generate/facebook', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ recipeIdea })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Hide progress and show results
+          generationProgress.classList.add('d-none');
+          resultsSection.style.display = 'block';
+          
+          // Store the current recipe ID
+          currentRecipeId = data.data.recipeId;
+          
+          // Check if properties exist before accessing them
+          const facebookContent = data.data.facebook || {};
+          
+          // Fill in content
+          recipeContent.textContent = facebookContent.recipe || '';
+          fbCaptionContent.textContent = facebookContent.fbCaption || '';
+          mjPromptContent.textContent = facebookContent.mjPrompt || '';
+          
+          // Set the recipe view link
+          viewRecipeLink.href = `/recipe/${data.data.recipeId}`;
+          
+          // Check if the recipe matches what was requested
+          if (data.data.matchesRequest === false) {
+            showStatus('warning', `
+              <strong>Note:</strong> The generated recipe "${facebookContent.title}" doesn't match your requested "${recipeIdea}". 
+              <br>
+              <ul>
+                <li>Try using more specific terms (e.g., "spaghetti bolognese" instead of "pasta")</li>
+                <li>Try using the exact name of a well-known dish</li>
+                <li>Check if your requested recipe idea is common or recognizable</li>
+              </ul>
+              <button class="btn btn-sm btn-primary mt-2" id="regenerateBtn">Try Again</button>
+            `);
+            
+            // Add event listener for regeneration
+            document.getElementById('regenerateBtn')?.addEventListener('click', function() {
+              generateBtn.click();
+            });
+          } else {
+            showStatus('success', 'Content generated successfully!');
+          }
+          
+          // Display file links
+          filesList.innerHTML = '';
+          if (data.files) {
+            Object.entries(data.files).forEach(([key, path]) => {
+              const li = document.createElement('li');
+              li.className = 'list-group-item d-flex justify-content-between align-items-center';
+              
+              const fileType = key.charAt(0).toUpperCase() + key.slice(1);
+              li.innerHTML = `
+                <span>${fileType} File</span>
+                <a href="${path}" target="_blank" class="btn btn-sm btn-outline-primary">View File</a>
+              `;
+              
+              filesList.appendChild(li);
+            });
+          }
+          
+          // Generate image for the recipe
+          if (currentRecipeId) {
+            onFacebookRecipeCreated(currentRecipeId);
+          }
+        } else {
+          throw new Error(data.message || 'Failed to generate content');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus('error', `An error occurred: ${error.message}`);
+        generationProgress.classList.add('d-none');
+      } finally {
+        // Reset button state
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = 'Generate Content';
+      }
+    });
+    
+    // Regenerate image button
+    if (regenerateImageBtn) {
+      regenerateImageBtn.addEventListener('click', function() {
+        if (currentRecipeId) {
+          onFacebookRecipeCreated(currentRecipeId);
+        }
+      });
+    }
+    
+    // Copy button functionality
+    document.querySelectorAll('.copy-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const contentId = this.getAttribute('data-content');
+        const content = document.getElementById(contentId).textContent;
+        
+        navigator.clipboard.writeText(content)
+          .then(() => {
+            const originalHTML = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check"></i> Copied!';
+            setTimeout(() => {
+              this.innerHTML = originalHTML;
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text. Please try again.');
+          });
+      });
+    });
+    
+    // Helper function to show status messages
+    function showStatus(type, message) {
+      let alertClass = 'alert-info';
+      if (type === 'error') alertClass = 'alert-danger';
+      if (type === 'success') alertClass = 'alert-success';
+      if (type === 'warning') alertClass = 'alert-warning';
+      
+      statusMessage.innerHTML = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+          ${message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      `;
+    }
+    
+    // Function to handle image generation after recipe creation
+    async function onFacebookRecipeCreated(recipeId) {
+      try {
+        // Show loading status
+        const statusElement = document.getElementById('image-generation-status');
+        const imageContainer = document.getElementById('generated-image-container');
+        const regenerateContainer = document.getElementById('regenerate-image-container');
+        
+        if (statusElement) {
+          statusElement.textContent = 'Generating image for recipe...';
+          statusElement.className = 'alert alert-info generating';
+        }
+        
+        if (imageContainer) {
+          imageContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+        }
+        
+        // Request image generation
+        const response = await fetch(`/midjourney/api/generate/${recipeId}`, {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        // Update status
+        if (statusElement) {
+          if (result.success) {
+            statusElement.textContent = 'Image generated successfully!';
+            statusElement.className = 'alert alert-success';
+            
+            // Show the generated image
+            if (imageContainer) {
+              const img = document.createElement('img');
+              img.src = `/midjourney/image/${result.imagePath}`;
+              img.alt = 'Generated recipe image';
+              img.className = 'img-fluid recipe-generated-image';
+              img.style.maxWidth = '100%';
+              img.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+              img.style.borderRadius = '5px';
+              
+              imageContainer.innerHTML = '';
+              imageContainer.appendChild(img);
+              
+              // Show regenerate button
+              if (regenerateContainer) {
+                regenerateContainer.style.display = 'block';
+              }
+            }
+          } else {
+            statusElement.textContent = `Image generation failed: ${result.error}`;
+            statusElement.className = 'alert alert-danger';
+            
+            // Show regenerate button
+            if (regenerateContainer) {
+              regenerateContainer.style.display = 'block';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error generating image:', error);
+        // Update status if element exists
+        const statusElement = document.getElementById('image-generation-status');
+        if (statusElement) {
+          statusElement.textContent = `Error: ${error.message}`;
+          statusElement.className = 'alert alert-danger';
+        }
+        
+        // Show regenerate button even on error
+        const regenerateContainer = document.getElementById('regenerate-image-container');
+        if (regenerateContainer) {
+          regenerateContainer.style.display = 'block';
+        }
+      }
+    }
+  });
+</script>
+
+<style>
+  #generated-image-container {
+    margin-top: 20px;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .recipe-generated-image {
+    transition: transform 0.3s ease;
+  }
+  
+  .recipe-generated-image:hover {
+    transform: scale(1.02);
+  }
+  
+  .generating {
+    background-color: #cfe2ff !important;
+    color: #084298 !important;
+  }
+</style>

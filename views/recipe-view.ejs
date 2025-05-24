@@ -1,0 +1,956 @@
+<!-- Individual recipe view page template -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= recipe.recipe_idea %> - Recipe Content Generator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/midjourney-grid-viewer.css"> <!-- Added CSS for midjourney grid -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    .nav-tabs .nav-link {
+      color: #555;
+    }
+    .nav-tabs .nav-link.active {
+      font-weight: bold;
+      color: #0d6efd;
+    }
+    .tab-content {
+      padding: 20px;
+      border: 1px solid #dee2e6;
+      border-top: none;
+      border-radius: 0 0 0.25rem 0.25rem;
+    }
+    .pinterest-variation {
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      margin-bottom: 15px;
+      padding: 15px;
+    }
+    .pinterest-variation.active {
+      border-color: #0d6efd;
+      background-color: rgba(13, 110, 253, 0.05);
+    }
+    .copy-btn {
+      cursor: pointer;
+    }
+    pre {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 0.25rem;
+      white-space: pre-wrap;
+    }
+    .author-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .author-info {
+      display: flex;
+      align-items: center;
+    }
+    .admin-content {
+      border-left: 3px solid #1cc88a;
+      padding-left: 15px;
+    }
+    .employee-content {
+      border-left: 3px solid #4e73df;
+      padding-left: 15px;
+    }
+    .recipe-title {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+    .recipe-meta {
+      margin-top: 15px;
+    }
+    .recipe-header {
+      padding: 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container mt-5">
+    <div class="row">
+      <div class="col-lg-12">
+       
+        
+        <div class="card mb-4">
+          <div class="card-header">
+            <!-- Recipe header area in recipe-view.ejs -->
+            <div class="recipe-header <%= recipe.owner_role === 'admin' ? 'admin-content' : 'employee-content' %>">
+              <h1 class="recipe-title"><%= recipe.recipe_idea %></h1>
+              
+              <div class="recipe-meta">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="author-info">
+                      <div class="author-avatar" style="background-color: <%= recipe.owner_role === 'admin' ? '#1cc88a' : '#4e73df' %>;">
+                        <%= recipe.owner_name ? recipe.owner_name.charAt(0).toUpperCase() : 'U' %>
+                      </div>
+                      <div>
+                        <strong>Created by:</strong> 
+                        <%= recipe.owner_name || 'Unknown' %>
+                        <span class="badge <%= recipe.owner_role === 'admin' ? 'bg-success' : 'bg-primary' %>">
+                          <%= recipe.owner_role || 'user' %>
+                        </span>
+                        <br>
+                        <small>Created: <%= moment(recipe.created_at).format('MMMM D, YYYY') %></small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 text-end">
+                    <% if (recipe.category) { %>
+                      <span class="badge bg-secondary"><%= recipe.category %></span>
+                    <% } %>
+                    
+                    <% if (recipe.interests) { %>
+                      <div class="mt-2">
+                        <small class="text-muted">Interests: <%= recipe.interests %></small>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-8">
+                <p><strong>Language:</strong> <%= recipe.language %></p>
+              </div>
+              <div class="col-md-4 text-md-end">
+                <a href="/generate/all" class="btn btn-success">
+                  <i class="fa fa-plus"></i> Generate New Recipe
+                </a>
+                <a href="/recipes" class="btn btn-outline-primary">
+                  <i class="fa fa-arrow-left"></i> Back to List
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Content tabs -->
+        <ul class="nav nav-tabs" id="contentTabs" role="tablist">
+          <% if (facebook) { %>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="facebook-tab" data-bs-toggle="tab" data-bs-target="#facebook" type="button" role="tab" aria-controls="facebook" aria-selected="true">
+                <i class="fab fa-facebook"></i> Facebook
+              </button>
+            </li>
+          <% } %>
+          
+          <% if (pinterestVariations && pinterestVariations.length > 0) { %>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link <%= !facebook ? 'active' : '' %>" id="pinterest-tab" data-bs-toggle="tab" data-bs-target="#pinterest" type="button" role="tab" aria-controls="pinterest" aria-selected="<%= !facebook %>">
+                <i class="fab fa-pinterest"></i> Pinterest (<%= pinterestVariations.length %>)
+              </button>
+            </li>
+          <% } %>
+          
+          <% if (blog) { %>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link <%= !facebook && (!pinterestVariations || pinterestVariations.length === 0) ? 'active' : '' %>" id="blog-tab" data-bs-toggle="tab" data-bs-target="#blog" type="button" role="tab" aria-controls="blog" aria-selected="<%= !facebook && (!pinterestVariations || pinterestVariations.length === 0) %>">
+                <i class="fa fa-blog"></i> Blog Post
+              </button>
+            </li>
+          <% } %>
+        </ul>
+        
+        <div class="tab-content" id="contentTabsContent">
+          <!-- Facebook Content Tab -->
+          <% if (facebook) { %>
+            <div class="tab-pane fade show active" id="facebook" role="tabpanel" aria-labelledby="facebook-tab">
+              <div class="row">
+                <div class="col-md-8">
+                  <h3>Facebook Recipe Post</h3>
+                  <div class="card mb-4">
+                    <div class="card-header bg-facebook text-white d-flex justify-content-between align-items-center">
+                      <h4 class="mb-0">Recipe</h4>
+                      <button class="btn btn-sm btn-light copy-btn" data-content="recipe-content">
+                        <i class="fa fa-copy"></i> Copy
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <pre id="recipe-content"><%= facebook.recipe_text %></pre>
+                    </div>
+                  </div>
+                  
+                  <div class="card mb-4">
+                    <div class="card-header bg-facebook text-white d-flex justify-content-between align-items-center">
+                      <h4 class="mb-0">Facebook Caption</h4>
+                      <button class="btn btn-sm btn-light copy-btn" data-content="fbcaption-content">
+                        <i class="fa fa-copy"></i> Copy
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <pre id="fbcaption-content"><%= facebook.fb_caption %></pre>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <h3>Midjourney Prompt</h3>
+                  <div class="card">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                      <h4 class="mb-0">Prompt</h4>
+                      <button class="btn btn-sm btn-light copy-btn" data-content="mjprompt-content">
+                        <i class="fa fa-copy"></i> Copy
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <pre id="mjprompt-content"><%= facebook.mj_prompt %></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Midjourney Grid Viewer Card -->
+              <div class="card mb-4">
+                <div class="card-header">
+                  <h5>Midjourney Images</h5>
+                </div>
+                <div class="card-body">
+                  <p class="text-muted">Click on any of the four images to select and save it to the recipe.</p>
+                  <div id="midjourney-grid-container"></div>
+                  
+                  <div id="processedImageFeedback" class="alert alert-success mt-3" style="display: none;">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <span id="processedImageMessage">Image processed successfully!</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% } %>
+          
+          <!-- Pinterest Content Tab -->
+          <% if (pinterestVariations && pinterestVariations.length > 0) { %>
+            <div class="tab-pane fade <%= !facebook ? 'show active' : '' %>" id="pinterest" role="tabpanel" aria-labelledby="pinterest-tab">
+              <div class="row">
+                <div class="col-md-12 mb-4">
+                  <h3>Pinterest Variations</h3>
+                  <p>Below are <%= pinterestVariations.length %> variations of Pinterest content for this recipe.</p>
+                  
+                  <div class="accordion" id="pinterestAccordion">
+                    <% pinterestVariations.forEach((variation, index) => { %>
+                      <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading<%= index %>">
+                          <button class="accordion-button <%= index > 0 ? 'collapsed' : '' %>" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<%= index %>" aria-expanded="<%= index === 0 %>" aria-controls="collapse<%= index %>">
+                            Variation <%= index + 1 %>: <%= variation.pin_title %>
+                          </button>
+                        </h2>
+                        <div id="collapse<%= index %>" class="accordion-collapse collapse <%= index === 0 ? 'show' : '' %>" aria-labelledby="heading<%= index %>" data-bs-parent="#pinterestAccordion">
+                          <div class="accordion-body">
+                            <div class="row">
+                              <div class="col-md-8">
+                                <h5>Pin Title</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                  <p class="mb-0 fw-bold"><%= variation.pin_title %></p>
+                                  <button class="btn btn-sm btn-outline-primary copy-btn" data-content="pintitle<%= index %>">
+                                    <i class="fa fa-copy"></i>
+                                  </button>
+                                </div>
+                                
+                                <h5 class="mt-3">Pin Description</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                  <p class="mb-0"><%= variation.pin_description %></p>
+                                  <button class="btn btn-sm btn-outline-primary copy-btn" data-content="pindesc<%= index %>">
+                                    <i class="fa fa-copy"></i>
+                                  </button>
+                                </div>
+                                
+                                <h5 class="mt-3">Overlay Text</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                  <p class="mb-0 fst-italic"><%= variation.overlay_text %></p>
+                                  <button class="btn btn-sm btn-outline-primary copy-btn" data-content="overlay<%= index %>">
+                                    <i class="fa fa-copy"></i>
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              <div class="col-md-4">
+                                <h5>Blog SEO</h5>
+                                <p><strong>Meta Title:</strong> <br><%= variation.meta_title %></p>
+                                <p><strong>Meta Description:</strong> <br><%= variation.meta_description %></p>
+                                <p><strong>URL Slug:</strong> <br><%= variation.meta_slug %></p>
+                                
+                                <% if (blog) { %>
+                                  <form action="/api/generate/blog-from-variation" method="POST" id="generateBlogForm<%= index %>">
+                                    <input type="hidden" name="recipeId" value="<%= recipe.id %>">
+                                    <input type="hidden" name="variationId" value="<%= variation.id %>">
+                                    <button type="submit" class="btn btn-success w-100 mt-3 generate-blog-btn" data-index="<%= index %>">
+                                      <i class="fa fa-magic"></i> Generate Blog Post with this Variation
+                                    </button>
+                                  </form>
+                                <% } else { %>
+                                  <form action="/api/generate/blog-from-variation" method="POST" id="generateBlogForm<%= index %>">
+                                    <input type="hidden" name="recipeId" value="<%= recipe.id %>">
+                                    <input type="hidden" name="variationId" value="<%= variation.id %>">
+                                    <button type="submit" class="btn btn-success w-100 mt-3 generate-blog-btn" data-index="<%= index %>">
+                                      <i class="fa fa-magic"></i> Generate Blog Post with this Variation
+                                    </button>
+                                  </form>
+                                <% } %>
+                              </div>
+                            </div>
+                            
+                            <!-- Hidden elements to support copy functionality -->
+                            <span id="pintitle<%= index %>" class="d-none"><%= variation.pin_title %></span>
+                            <span id="pindesc<%= index %>" class="d-none"><%= variation.pin_description %></span>
+                            <span id="overlay<%= index %>" class="d-none"><%= variation.overlay_text %></span>
+                          </div>
+                        </div>
+                      </div>
+                    <% }); %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% } %>
+          
+          <!-- Blog Content Tab -->
+          <% if (blog) { %>
+            <div class="tab-pane fade <%= !facebook && (!pinterestVariations || pinterestVariations.length === 0) ? 'show active' : '' %>" id="blog" role="tabpanel" aria-labelledby="blog-tab">
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Blog Post</h3>
+                    <button class="btn btn-outline-primary copy-btn" data-content="blogpost">
+                      <i class="fa fa-copy"></i> Copy HTML
+                    </button>
+                  </div>
+                  
+                  <div class="card">
+                    <div class="card-header bg-wordpress text-white">
+                      <h4 class="mb-0">Blog Post Preview</h4>
+                    </div>
+                    <div class="card-body">
+                      <div id="blog-preview">
+                        <%- blog.html_content %>
+                      </div>
+                      
+                      <!-- Hidden content for copy -->
+                      <div id="blogpost" class="d-none"><%= blog.html_content %></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+        
+        <!-- WordPress Publishing Section -->
+        <div class="card mt-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">WordPress Publishing</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="publishToWordPress">
+              Publish to WordPress
+            </button>
+          </div>
+          <div class="card-body">
+            <div id="wpStatus">
+              <!-- WordPress publication history will be displayed here -->
+              <div class="placeholder-glow">
+                <p class="placeholder col-12"></p>
+                <p class="placeholder col-10"></p>
+              </div>
+            </div>
+            
+            <div id="wpPublishForm" class="mt-3 d-none">
+              <h6>Publish Options</h6>
+              <form id="wordpressPublishForm" class="mb-3">
+                <div class="mb-3">
+                  <label for="wpPostStatus" class="form-label">Post Status</label>
+                  <select class="form-select" id="wpPostStatus" name="status">
+                    <option value="draft">Draft</option>
+                    <option value="publish">Published</option>
+                    <option value="pending">Pending Review</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" id="wpAddRecipe" name="addRecipe" checked>
+                  <label class="form-check-label" for="wpAddRecipe">
+                    Add recipe to post using WP Recipe Maker
+                  </label>
+                  <div class="form-text">If checked, the recipe data will be added to the post using WP Recipe Maker plugin.</div>
+                </div>
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" id="wpFormatContent" name="formatContent" checked>
+                  <label class="form-check-label" for="wpFormatContent">
+                    Format content for WordPress Gutenberg
+                  </label>
+                </div>
+                <input type="hidden" name="recipeId" value="<%= recipe.id %>">
+                <button type="submit" class="btn btn-primary">Publish</button>
+                <button type="button" class="btn btn-outline-secondary ms-2" id="cancelPublish">Cancel</button>
+              </form>
+            </div>
+            
+            <div id="wpPublicationHistory" class="mt-3">
+              <!-- Publication history will be loaded here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV Export Info Modal -->
+  <div class="modal fade" id="csvExportInfoModal" tabindex="-1" aria-labelledby="csvExportInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="csvExportInfoModalLabel">CSV Export for Canva Integration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-12">
+              <h4>About the CSV Export Feature</h4>
+              <p>The CSV Export button generates a file containing the following information:</p>
+              <ul>
+                <li><strong>Recipe Title</strong>: The title of your recipe</li>
+                <li><strong>Ingredients 1-4</strong>: The first four ingredients from your recipe</li>
+                <li><strong>Image Path</strong>: The path to your recipe image</li>
+              </ul>
+              
+              <h4>How to Use with Canva</h4>
+              <ol>
+                <li>Click the <strong>Export CSV</strong> button to download the recipe data</li>
+                <li>Open Canva and navigate to your template</li>
+                <li>Use Canva's "Bulk Create" feature (Pro accounts)</li>
+                <li>Upload the CSV file when prompted</li>
+                <li>Map the CSV columns to the appropriate fields in your template</li>
+                <li>Generate all your designs at once!</li>
+              </ol>
+              
+              <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i> Need to export multiple recipes at once? Go to the Recipes page and use the "Export All as CSV" button.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <a href="/api/export/recipe/<%= recipe.id %>/csv" class="btn btn-primary" download>
+            <i class="fa fa-file-csv"></i> Export Now
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/midjourney-grid-viewer.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Blog generation from variation
+      document.querySelectorAll('.generate-blog-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          const form = this.closest('form');
+          const index = this.getAttribute('data-index');
+          const originalText = this.innerHTML;
+          
+          this.disabled = true;
+          this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+          
+          fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              recipeId: form.querySelector('input[name="recipeId"]').value,
+              variationId: form.querySelector('input[name="variationId"]').value
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Update blog tab with new content
+              const blogPreview = document.getElementById('blog-preview');
+              if (blogPreview) {
+                blogPreview.innerHTML = data.blogContent;
+              }
+              
+              // Update hidden content for copy
+              const blogpost = document.getElementById('blogpost');
+              if (blogpost) {
+                blogpost.innerText = data.blogContent;
+              }
+              
+              // Switch to blog tab
+              const blogTab = document.getElementById('blog-tab');
+              if (blogTab) {
+                blogTab.click();
+              }
+              
+              this.innerHTML = '<i class="fa fa-check"></i> Success!';
+              setTimeout(() => {
+                this.innerHTML = originalText;
+                this.disabled = false;
+              }, 2000);
+            } else {
+              this.innerHTML = '<i class="fa fa-times"></i> Failed!';
+              setTimeout(() => {
+                this.innerHTML = originalText;
+                this.disabled = false;
+              }, 2000);
+              alert('Failed to generate blog: ' + data.message);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            this.innerHTML = '<i class="fa fa-times"></i> Error!';
+            setTimeout(() => {
+              this.innerHTML = originalText;
+              this.disabled = false;
+            }, 2000);
+            alert('An error occurred: ' + error.message);
+          });
+        });
+      });
+      
+      // Copy button functionality
+      document.querySelectorAll('.copy-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const contentId = this.getAttribute('data-content');
+          const contentElement = document.getElementById(contentId);
+          const text = contentElement.innerText || contentElement.textContent;
+          
+          navigator.clipboard.writeText(text).then(() => {
+            // Show success indicator
+            const originalHTML = this.innerHTML;
+            this.innerHTML = '<i class="fa fa-check"></i> Copied!';
+            setTimeout(() => {
+              this.innerHTML = originalHTML;
+            }, 2000);
+          }).catch(err => {
+            console.error('Could not copy text: ', err);
+          });
+        });
+      });
+      
+      // Midjourney Grid Viewer initialization
+      // Replace the Midjourney Grid Viewer initialization section in recipe-view.ejs
+// This goes in the <script> section where MidjourneyGridViewer is currently initialized
+
+// Midjourney Grid Viewer initialization
+if (document.getElementById('midjourney-grid-container')) {
+  // Initialize the grid viewer with the current recipe data
+  const recipeId = '<%= recipe.id %>'; // Get the recipe ID from your template
+  
+  // Get the prompt from your recipe data if available
+  let prompt = '';
+  <% if (facebook && facebook.mj_prompt) { %>
+    prompt = '<%= facebook.mj_prompt %>';
+  <% } %>
+  
+  // If you have the image URL from Midjourney already, set it here
+  const imageUrl = '<%= midjourneyImageUrl || "" %>'; // This should be set in your route
+  
+  // Check if recipe already has processed images
+  checkRecipeImages(recipeId, imageUrl, prompt);
+}
+
+// Function to check if recipe has existing processed images
+async function checkRecipeImages(recipeId, imageUrl, prompt) {
+  try {
+    // First check if the recipe has any processed images
+    const response = await fetch(`/midjourney/api/recipe/${recipeId}`);
+    const data = await response.json();
+    
+    let hasSelectedImage = false;
+    let selectedImageUrl = null;
+    
+    if (data.success && data.images && data.images.length > 0) {
+      // Check if any images are completed (not just pending/failed)
+      const completedImages = data.images.filter(img => img.status === 'completed' && img.image_path);
+      
+      if (completedImages.length > 0) {
+        // Recipe has at least one completed image
+        hasSelectedImage = true;
+        // Use the most recent completed image
+        const latestImage = completedImages[0]; // Images are sorted by creation date (newest first)
+        selectedImageUrl = `/recipe_images/${latestImage.image_path}`;
+        
+        console.log('Recipe already has selected image:', selectedImageUrl);
+      }
+    }
+    
+    // Initialize the grid viewer based on whether an image is already selected
+    if (imageUrl || hasSelectedImage) {
+      const gridViewer = new MidjourneyGridViewer({
+        containerSelector: '#midjourney-grid-container',
+        imageUrl: imageUrl,
+        recipeId: recipeId,
+        prompt: prompt,
+        hasSelectedImage: hasSelectedImage,        // NEW: Pass the selected image status
+        selectedImageUrl: selectedImageUrl,        // NEW: Pass the selected image URL
+        onImageProcessed: function(result) {
+          // Show success message
+          const feedback = document.getElementById('processedImageFeedback');
+          const message = document.getElementById('processedImageMessage');
+          
+          if (feedback && message) {
+            message.textContent = 'Image processed and saved to recipe images!';
+            feedback.style.display = 'block';
+            
+            // Automatically hide after 5 seconds
+            setTimeout(() => {
+              feedback.style.display = 'none';
+            }, 5000);
+          }
+          
+          console.log('Image processed successfully:', result);
+        },
+        onError: function(error) {
+          // Show error message
+          const feedback = document.getElementById('processedImageFeedback');
+          const message = document.getElementById('processedImageMessage');
+          
+          if (feedback && message) {
+            feedback.classList.remove('alert-success');
+            feedback.classList.add('alert-danger');
+            message.textContent = `Error: ${error.message || 'Failed to process image'}`;
+            feedback.style.display = 'block';
+          }
+          
+          console.error('Image processing error:', error);
+        }
+      });
+    } else {
+      // No image URL and no selected image - show info message
+      document.getElementById('midjourney-grid-container').innerHTML = `
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>No Midjourney Image Available</strong>
+          <p class="mb-2 mt-2">To generate an image for this recipe:</p>
+          <ol class="mb-2">
+            <li>Use the Midjourney prompt above to generate an image in Discord</li>
+            <li>Once generated, the image will appear here for selection</li>
+            <li>Click on your preferred quadrant to save it to this recipe</li>
+          </ol>
+          <button class="btn btn-sm btn-primary" onclick="checkForNewImages()">
+            <i class="bi bi-arrow-clockwise"></i> Check for New Images
+          </button>
+        </div>
+      `;
+    }
+    
+  } catch (error) {
+    console.error('Error checking recipe images:', error);
+    
+    // Fallback - initialize with basic setup
+    if (imageUrl) {
+      const gridViewer = new MidjourneyGridViewer({
+        containerSelector: '#midjourney-grid-container',
+        imageUrl: imageUrl,
+        recipeId: recipeId,
+        prompt: prompt,
+        hasSelectedImage: false,
+        selectedImageUrl: null,
+        onImageProcessed: function(result) {
+          console.log('Image processed successfully:', result);
+          // Show success feedback if elements exist
+          const feedback = document.getElementById('processedImageFeedback');
+          const message = document.getElementById('processedImageMessage');
+          if (feedback && message) {
+            message.textContent = 'Image processed and saved to recipe images!';
+            feedback.style.display = 'block';
+          }
+        },
+        onError: function(error) {
+          console.error('Image processing error:', error);
+          // Show error feedback if elements exist
+          const feedback = document.getElementById('processedImageFeedback');
+          const message = document.getElementById('processedImageMessage');
+          if (feedback && message) {
+            feedback.classList.remove('alert-success');
+            feedback.classList.add('alert-danger');
+            message.textContent = `Error: ${error.message || 'Failed to process image'}`;
+            feedback.style.display = 'block';
+          }
+        }
+      });
+    } else {
+      document.getElementById('midjourney-grid-container').innerHTML = 
+        '<div class="alert alert-warning">Error loading image interface. Please refresh the page.</div>';
+    }
+  }
+}
+
+// Function to manually check for new images (called by the button)
+async function checkForNewImages() {
+  const recipeId = '<%= recipe.id %>';
+  const button = event.target.closest('button');
+  
+  // Show loading state
+  const originalText = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Checking...';
+  
+  try {
+    // Re-check for images
+    const response = await fetch(`/midjourney/api/recipe/${recipeId}`);
+    const data = await response.json();
+    
+    if (data.success && data.images && data.images.length > 0) {
+      // Check for completed images
+      const completedImages = data.images.filter(img => img.status === 'completed' && img.image_path);
+      
+      if (completedImages.length > 0) {
+        // Found images - reload the page to refresh the interface
+        window.location.reload();
+        return;
+      }
+    }
+    
+    // No new images found
+    button.innerHTML = '<i class="bi bi-x-circle"></i> No New Images';
+    setTimeout(() => {
+      button.innerHTML = originalText;
+      button.disabled = false;
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Error checking for new images:', error);
+    button.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error';
+    setTimeout(() => {
+      button.innerHTML = originalText;
+      button.disabled = false;
+    }, 2000);
+  }
+}
+      // WordPress publishing functionality
+      const publishBtn = document.getElementById('publishToWordPress');
+      const wpStatus = document.getElementById('wpStatus');
+      const wpPublishForm = document.getElementById('wpPublishForm');
+      const wpPublicationHistory = document.getElementById('wpPublicationHistory');
+      const publishForm = document.getElementById('wordpressPublishForm');
+      const cancelBtn = document.getElementById('cancelPublish');
+      
+      // Load WordPress settings and publication history
+      loadWordPressInfo();
+      
+      // Show publish form when button is clicked
+      publishBtn.addEventListener('click', function() {
+        wpPublishForm.classList.remove('d-none');
+        publishBtn.classList.add('d-none');
+      });
+      
+      // Hide form when cancel is clicked
+      cancelBtn.addEventListener('click', function() {
+        wpPublishForm.classList.add('d-none');
+        publishBtn.classList.remove('d-none');
+      });
+      
+      // Handle form submission
+      publishForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(publishForm);
+        const recipeId = formData.get('recipeId');
+        const status = formData.get('status');
+        const formatContent = formData.get('formatContent') === 'on';
+        const addRecipe = formData.get('addRecipe') === 'on';
+        
+        publishBtn.disabled = true;
+        publishForm.querySelector('button[type="submit"]').disabled = true;
+        publishForm.querySelector('button[type="submit"]').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Publishing...';
+        
+        try {
+          // Use the recipe-aware endpoint if adding recipe
+          const endpoint = addRecipe ? '/api/wordpress/publish-with-recipe' : '/api/wordpress/publish-formatted';
+          
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              recipeId,
+              status,
+              formatContent
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            // Show success message
+            wpPublishForm.classList.add('d-none');
+            publishBtn.classList.remove('d-none');
+            
+            // Reload WordPress info
+            loadWordPressInfo();
+            
+            // Success alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+              <strong>Success!</strong> Published to WordPress as ${status}.
+              <a href="${result.post.url}" target="_blank" class="alert-link">View Post</a>
+              ${result.recipe ? '<br>Recipe added successfully using WP Recipe Maker.' : ''}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.querySelector('.card-body').prepend(alertDiv);
+          } else {
+            throw new Error(result.message || 'Failed to publish');
+          }
+        } catch (error) {
+          console.error('Publishing error:', error);
+          
+          // Error alert
+          const alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+          alertDiv.innerHTML = `
+            <strong>Error!</strong> ${error.message || 'Failed to publish to WordPress'}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          `;
+          document.querySelector('.card-body').prepend(alertDiv);
+        } finally {
+          publishBtn.disabled = false;
+          publishForm.querySelector('button[type="submit"]').disabled = false;
+          publishForm.querySelector('button[type="submit"]').innerHTML = 'Publish';
+        }
+      });
+      
+      // Function to load WordPress settings and publication history
+      async function loadWordPressInfo() {
+        try {
+          // Get WordPress settings
+          const settingsResponse = await fetch('/api/wordpress/settings');
+          const settingsData = await settingsResponse.json();
+          
+          // Get publication history
+          const recipeId = '<%= recipe.id %>';
+          const publicationsResponse = await fetch(`/api/wordpress/publications/${recipeId}`);
+          const publicationsData = await publicationsResponse.json();
+          
+          // Update status display
+          if (settingsData.success) {
+            if (publicationsData.success && publicationsData.publications && publicationsData.publications.length > 0) {
+              // Show publication history
+              const publications = publicationsData.publications;
+              
+              // Update status message
+              wpStatus.innerHTML = `
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-wordpress text-success me-2" style="font-size: 1.5rem;"></i>
+                  <div>
+                    <p class="mb-1">This recipe has been published to WordPress</p>
+                    <p class="text-muted small mb-0">Connected to: ${settingsData.settings.site_url}</p>
+                  </div>
+                </div>
+              `;
+              
+              // Show publication history
+              wpPublicationHistory.innerHTML = `
+                <h6>Publication History</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Link</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${publications.map(pub => `
+                        <tr>
+                          <td>${new Date(pub.created_at).toLocaleDateString()}</td>
+                          <td><span class="badge bg-${
+                            pub.wp_status === 'publish' ? 'success' : 
+                            pub.wp_status === 'draft' ? 'secondary' : 
+                            pub.wp_status === 'pending' ? 'warning' : 'info'
+                          }">${pub.wp_status}</span></td>
+                          <td><a href="${pub.wp_post_url}" target="_blank">View</a></td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `;
+            } else {
+              // Show not published yet
+              wpStatus.innerHTML = `
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-wordpress me-2" style="font-size: 1.5rem;"></i>
+                  <div>
+                    <p class="mb-1">This recipe has not been published to WordPress yet</p>
+                    <p class="text-muted small mb-0">Connected to: ${settingsData.settings.site_url}</p>
+                  </div>
+                </div>
+              `;
+              
+              wpPublicationHistory.innerHTML = '';
+            }
+            
+            // Enable publish button
+            publishBtn.disabled = false;
+          } else {
+            // WordPress not configured
+            wpStatus.innerHTML = `
+              <div class="alert alert-warning mb-0">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                WordPress publishing is not configured.
+                <a href="/wordpress-settings" class="alert-link">Configure WordPress Settings</a>
+              </div>
+            `;
+            
+            // Disable publish button
+            publishBtn.disabled = true;
+            wpPublicationHistory.innerHTML = '';
+          }
+        } catch (error) {
+          console.error('Error loading WordPress info:', error);
+          wpStatus.innerHTML = `
+            <div class="alert alert-danger mb-0">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              Error loading WordPress information: ${error.message}
+            </div>
+          `;
+        }
+      }
+
+      // CSV Export Info Modal functionality
+      const csvExportButtons = document.querySelectorAll('a[href^="/api/export/recipe/"][download]');
+      
+      csvExportButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+          // Check if the user has seen the info before
+          if (!localStorage.getItem('csvExportInfoSeen')) {
+            e.preventDefault();
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('csvExportInfoModal'));
+            modal.show();
+            
+            // Mark as seen
+            localStorage.setItem('csvExportInfoSeen', 'true');
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

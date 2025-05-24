@@ -1,0 +1,244 @@
+// wordpress-db.js
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
+
+// Create a connection to the database
+const db = new sqlite3.Database(path.join(__dirname, 'data', 'recipes.db'));
+
+// Helper to run queries as promises
+function runQuery(query, params = []) {
+    return new Promise((resolve, reject) => {
+        db.run(query, params, function(err) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve({ lastID: this.lastID, changes: this.changes, id: params[0] });
+            }
+        });
+    });
+}
+
+// Helper to get a single row
+function getOne(query, params = []) {
+    return new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(row);
+            }
+        });
+    });
+}
+
+// Helper to get multiple rows
+function getAll(query, params = []) {
+    return new Promise((resolve, reject) => {
+        db.all(query, params, (err, rows) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
+}
+
+// Create the necessary tables if they don't exist
+async function initTables() {
+    try {
+        // WordPress settings table
+        await runQuery(`
+            CREATE TABLE IF NOT EXISTS wordpress_settings (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL DEFAULT 'default',
+                site_url TEXT NOT NULL,
+                username TEXT NOT NULL,
+                password TEXT NOT NULL,
+                default_status TEXT DEFAULT 'draft',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id)
+            )
+        `);
+
+        // WordPress publications history
+        await runQuery(`
+            CREATE TABLE IF NOT EXISTS wordpress_publications (
+                id TEXT PRIMARY KEY,
+                recipe_id TEXT NOT NULL,
+                wp_post_id TEXT NOT NULL,
+                wp_post_url TEXT NOT NULL,
+                wp_status TEXT DEFAULT 'draft',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+            )
+        `);
+
+        console.log('WordPress tables initialized');
+    } catch (error) {
+        console.error('Error initializing WordPress tables:', error);
+        throw error;
+    }
+}
+
+// Initialize tables when the module is loaded
+initTables();
+
+// WordPress operations
+const wordpressDb = {
+    // Save or update WordPress settings
+    async saveSettings(settings) {
+        try {
+            const existing = await getOne(
+                `SELECT id FROM wordpress_settings WHERE user_id = ?`,
+                [settings.userId || 'default']
+            );
+            
+            if (existing) {
+                await runQuery(
+                    `UPDATE wordpress_settings 
+                    SET site_url = ?, username = ?, password = ?, default_status = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?`,
+                    [
+                        settings.siteUrl,
+                        settings.username,
+                        settings.password,
+                        settings.defaultStatus || 'draft',
+                        settings.userId || 'default'
+                    ]
+                );
+                return existing.id;
+            } else {
+                const id = uuidv4();
+                await runQuery(
+                    `INSERT INTO wordpress_settings 
+                    (id, user_id, site_url, username, password, default_status)
+                    VALUES (?, ?, ?, ?, ?, ?)`,
+                    [
+                        id,
+                        settings.userId || 'default',
+                        settings.siteUrl,
+                        settings.username,
+                        settings.password,
+                        settings.defaultStatus || 'draft'
+                    ]
+                );
+                return id;
+            }
+        } catch (error) {
+            console.error('Error saving WordPress settings:', error);
+            throw error;
+        }
+    },
+    
+    // Get WordPress settings
+    async getSettings(userId = 'default') {
+        try {
+            return await getOne(
+                `SELECT id, user_id, site_url, username, password, default_status, created_at, updated_at
+                FROM wordpress_settings
+                WHERE user_id = ?`,
+                [userId]
+            );
+        } catch (error) {
+            console.error('Error getting WordPress settings:', error);
+            throw error;
+        }
+    },
+    
+    // Save publication history
+    async savePublication(data) {
+        try {
+            const id = uuidv4();
+            await runQuery(
+                `INSERT INTO wordpress_publications 
+                (id, recipe_id, wp_post_id, wp_post_url, wp_status)
+                VALUES (?, ?, ?, ?, ?)`,
+                [
+                    id,
+                    data.recipeId,
+                    data.wpPostId.toString(),
+                    data.wpPostUrl,
+                    data.wpStatus || 'draft'
+                ]
+            );
+            return id;
+        } catch (error) {
+            console.error('Error saving WordPress publication:', error);
+            throw error;
+        }
+    },
+    
+    // Get publication history for a recipe
+    async getPublicationsByRecipeId(recipeId) {
+        try {
+            return await getAll(
+                `SELECT id, recipe_id, wp_post_id, wp_post_url, wp_status, created_at
+                FROM wordpress_publications
+                WHERE recipe_id = ?
+                ORDER BY created_at DESC`,
+                [recipeId]
+            );
+        } catch (error) {
+            console.error('Error getting WordPress publications:', error);
+            throw error;
+        }
+    },
+    
+    // Add this missing function that's being called in server.js
+    // Get count of publications for a user or organization
+    async getPublicationCount(userId = null, organizationId = null) {
+        try {
+            let query, params;
+            
+            if (userId && organizationId) {
+                // Get count for a specific user within an organization
+                query = `
+                    SELECT COUNT(*) as count 
+                    FROM wordpress_publications wp
+                    JOIN recipes r ON wp.recipe_id = r.id
+                    WHERE r.owner_id = ? AND r.organization_id = ?
+                `;
+                params = [userId, organizationId];
+            } else if (userId) {
+                // Get count for a specific user
+                query = `
+                    SELECT COUNT(*) as count 
+                    FROM wordpress_publications wp
+                    JOIN recipes r ON wp.recipe_id = r.id
+                    WHERE r.owner_id = ?
+                `;
+                params = [userId];
+            } else if (organizationId) {
+                // Get count for an organization
+                query = `
+                    SELECT COUNT(*) as count 
+                    FROM wordpress_publications wp
+                    JOIN recipes r ON wp.recipe_id = r.id
+                    WHERE r.organization_id = ?
+                `;
+                params = [organizationId];
+            } else {
+                // Get total count
+                query = `SELECT COUNT(*) as count FROM wordpress_publications`;
+                params = [];
+            }
+            
+            const result = await getOne(query, params);
+            return result ? result.count : 0;
+        } catch (error) {
+            console.error('Error getting WordPress publication count:', error);
+            throw error;
+        }
+    }
+};
+
+// Export functions and the database object
+module.exports = {
+    ...wordpressDb,
+    getOne,
+    getAll,
+    runQuery
+};
