@@ -844,70 +844,71 @@ const keywordsDb = {
     },
     
     // Add multiple keywords in batch with ownership
-    async addKeywordsBatch(keywordsData) {
-        if (!Array.isArray(keywordsData) || keywordsData.length === 0) {
-            throw new Error('No keywords provided');
-        }
-        
-        console.log(`Adding batch of ${keywordsData.length} keywords`);
-        
-        // Validate that each keyword has the required owner and organization
-        const invalidKeywords = keywordsData.filter(k => !k.ownerId || !k.organizationId);
-        if (invalidKeywords.length > 0) {
-            console.error('Found keywords missing owner or organization:', invalidKeywords);
-            throw new Error('All keywords must have an owner and organization');
-        }
-        
-        const keywordIds = [];
-        
-        // Use a transaction for better performance and atomicity
-        await new Promise((resolve, reject) => {
-            db.run('BEGIN TRANSACTION', async (err) => {
-                if (err) {
-                    return reject(err);
+    // Add multiple keywords in batch with ownership
+async addKeywordsBatch(keywordsData) {
+    if (!Array.isArray(keywordsData) || keywordsData.length === 0) {
+        throw new Error('No keywords provided');
+    }
+    
+    console.log(`Adding batch of ${keywordsData.length} keywords`);
+    
+    // Validate that each keyword has the required owner and organization
+    const invalidKeywords = keywordsData.filter(k => !k.ownerId || !k.organizationId);
+    if (invalidKeywords.length > 0) {
+        console.error('Found keywords missing owner or organization:', invalidKeywords);
+        throw new Error('All keywords must have an owner and organization');
+    }
+    
+    const keywordIds = [];
+    
+    // Use a transaction for better performance and atomicity
+    await new Promise((resolve, reject) => {
+        db.run('BEGIN TRANSACTION', async (err) => {
+            if (err) {
+                return reject(err);
+            }
+            
+            try {
+                for (const keywordData of keywordsData) {
+                    const id = uuidv4();
+                    const { keyword, category, interests, image_url, ownerId, organizationId, websiteId } = keywordData;
+                    
+                    // Use explicit websiteId or fallback to global context
+                    const effectiveWebsiteId = websiteId || global.currentWebsiteId;
+                    
+                    console.log(`Inserting keyword: "${keyword}" for owner: ${ownerId}, org: ${organizationId}`);
+                    
+                    await runQuery(
+                        `INSERT INTO keywords (id, keyword, category, interests, image_url, status, owner_id, organization_id, website_id, added_at) 
+                         VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, CURRENT_TIMESTAMP)`,
+                        [id, keyword, category, interests, image_url, ownerId, organizationId, effectiveWebsiteId]
+                    );
+                    
+                    keywordIds.push(id);
                 }
                 
-                try {
-                    for (const keywordData of keywordsData) {
-                        const id = uuidv4();
-                        const { keyword, category, interests, ownerId, organizationId, websiteId } = keywordData;
-                        
-                        // Use explicit websiteId or fallback to global context
-                        const effectiveWebsiteId = websiteId || global.currentWebsiteId;
-                        
-                        console.log(`Inserting keyword: "${keyword}" for owner: ${ownerId}, org: ${organizationId}`);
-                        
-                        await runQuery(
-                            `INSERT INTO keywords (id, keyword, category, interests, status, owner_id, organization_id, website_id) 
-                             VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
-                            [id, keyword, category, interests, ownerId, organizationId, effectiveWebsiteId]
-                        );
-                        
-                        keywordIds.push(id);
+                db.run('COMMIT', (err) => {
+                    if (err) {
+                        return reject(err);
                     }
-                    
-                    db.run('COMMIT', (err) => {
-                        if (err) {
-                            return reject(err);
-                        }
-                        resolve();
-                    });
-                } catch (e) {
-                    console.error('Error in transaction, rolling back:', e);
-                    db.run('ROLLBACK', () => {
-                        reject(e);
-                    });
-                }
-            });
+                    resolve();
+                });
+            } catch (e) {
+                console.error('Error in transaction, rolling back:', e);
+                db.run('ROLLBACK', () => {
+                    reject(e);
+                });
+            }
         });
-        
-        return keywordIds;
-    },
+    });
+    
+    return keywordIds;
+},
     
     // Get all keywords with optional filtering and ownership
     async getKeywords(status = null, limit = 100, offset = 0, searchTerm = null, ownerId = null, organizationId = null, websiteId = null) {
-        let query = `SELECT id, keyword, category, interests, status, recipe_id, owner_id, organization_id, website_id, added_at, processed_at
-                     FROM keywords`;
+        let query = `SELECT id, keyword, category, interests, image_url, status, recipe_id, owner_id, organization_id, website_id, added_at, processed_at
+FROM keywords `;
         
         const params = [];
         let whereAdded = false;
@@ -990,11 +991,11 @@ const keywordsDb = {
     async getKeywordsByOrganization(organizationId, status = null, limit = 100, offset = 0, searchTerm = null, websiteId = null) {
         console.log(`Getting keywords for organization: ${organizationId}, status: ${status}, search: ${searchTerm}`);
         
-        let query = `SELECT k.id, k.keyword, k.category, k.interests, k.status, k.recipe_id, 
-                           k.owner_id, k.organization_id, k.website_id, k.added_at, k.processed_at,
-                           u.name as owner_name, u.role as owner_role
-                     FROM keywords k
-                     LEFT JOIN users u ON k.owner_id = u.id`;
+        let query = `SELECT k.id, k.keyword, k.category, k.interests, k.image_url, k.status, k.recipe_id, 
+       k.owner_id, k.organization_id, k.website_id, k.added_at, k.processed_at,
+       u.name as owner_name, u.role as owner_role
+FROM keywords k
+LEFT JOIN users u ON k.owner_id = u.id`;
         
         const params = [];
         let whereAdded = false;
@@ -1120,8 +1121,8 @@ const keywordsDb = {
     
     // Get a single keyword by ID
     async getKeywordById(id, websiteId = null) {
-        let query = `SELECT id, keyword, category, interests, status, recipe_id, owner_id, organization_id, website_id, added_at, processed_at
-                     FROM keywords 
+        let query = `SELECT id, keyword, category, interests, image_url, status, recipe_id, owner_id, organization_id, website_id, added_at, processed_at
+FROM keywords 
                      WHERE id = ?`;
         let params = [id];
         
@@ -1140,33 +1141,34 @@ const keywordsDb = {
     },
     
     // Get multiple keywords by IDs
-    async getKeywordsByIds(ids, websiteId = null) {
-        if (!Array.isArray(ids) || ids.length === 0) {
-            return [];
-        }
-        
-        const placeholders = ids.map(() => '?').join(',');
-        let params = [...ids];
-        
-        let query = `SELECT id, keyword, category, interests, status, recipe_id, owner_id, organization_id, website_id, added_at, processed_at
-                     FROM keywords 
+    // Get multiple keywords by IDs
+async getKeywordsByIds(ids, websiteId = null) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return [];
+    }
+    
+    const placeholders = ids.map(() => '?').join(',');
+    let params = [...ids];
+    
+    let query = `SELECT id, keyword, category, interests, image_url, status, recipe_id, owner_id, organization_id, website_id, added_at, processed_at
+FROM keywords 
                      WHERE id IN (${placeholders})`;
-        
-        // If websiteId is provided explicitly, use it
-        if (websiteId) {
-            query += ` AND website_id = ?`;
-            params.push(websiteId);
-        } 
-        // Otherwise use the global context
-        else if (global.currentWebsiteId) {
-            query += ` AND website_id = ?`;
-            params.push(global.currentWebsiteId);
-        }
-        
-        query += ` ORDER BY added_at DESC`;
-        
-        return await getAll(query, params);
-    },
+    
+    // If websiteId is provided explicitly, use it
+    if (websiteId) {
+        query += ` AND website_id = ?`;
+        params.push(websiteId);
+    } 
+    // Otherwise use the global context
+    else if (global.currentWebsiteId) {
+        query += ` AND website_id = ?`;
+        params.push(global.currentWebsiteId);
+    }
+    
+    query += ` ORDER BY added_at DESC`;
+    
+    return await getAll(query, params);
+},
     
     // Replace the updateKeywordStatus function in db.js (around line 1077) with this fixed version
 

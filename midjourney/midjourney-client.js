@@ -12,15 +12,26 @@ class MidjourneyClient {
     this.relaxMode = relaxMode;
     this.debugMode = debugMode;
     
-    // Enhanced timeout settings
-    this.checkInterval = relaxMode ? 15000 : 8000;
-    this.maxImagineAttempts = relaxMode ? 25 : 20;
+    // UPDATED: Human-like timing with randomization
+    this.baseCheckInterval = relaxMode ? 20000 : 12000; // Base intervals
+    this.checkInterval = this.getRandomInterval();
+    this.maxImagineAttempts = relaxMode ? 30 : 25; // Increased for slower checking
     this.maxUpscaleAttempts = relaxMode ? 20 : 15;
+    
+    // NEW: Human behavior patterns
+    this.minHumanDelay = 2000; // Min 2 seconds
+    this.maxHumanDelay = 8000; // Max 8 seconds
+    this.typingDelay = () => Math.random() * 3000 + 1000; // 1-4 seconds "typing"
+    
+    // NEW: Rate limiting with variation
+    this.requestCount = 0;
+    this.lastRequestTime = 0;
+    this.rateLimitBase = 3000; // Base 3 seconds between requests
     
     // NEW: Concurrent job handling settings
     this.maxConcurrentRetries = 3;
     this.concurrentRetryDelay = 30000; // 30 seconds
-    this.rateLimitDelay = 1000; // 5 seconds between requests
+    this.rateLimitDelay = 1000; // 1 second between requests
     
     this.client = axios.create({
       baseURL: this.apiUrl,
@@ -44,15 +55,61 @@ class MidjourneyClient {
     }
 
     if (this.debugMode) {
-      console.log(`🎉 [DEBUG] Enhanced MidjourneyClient initialized with concurrent job handling`);
+      console.log(`🎉 [DEBUG] Enhanced MidjourneyClient initialized with human-like behavior`);
       console.log(`📢 [DEBUG] Channel ID: ${this.channelId}`);
       console.log(`⚡ [DEBUG] Relax mode: ${this.relaxMode}`);
-      console.log(`⏰ [DEBUG] Check interval: ${this.checkInterval}ms`);
+      console.log(`⏰ [DEBUG] Base check interval: ${this.baseCheckInterval}ms`);
       console.log(`🔄 [DEBUG] Max imagine attempts: ${this.maxImagineAttempts}`);
       console.log(`🔄 [DEBUG] Max concurrent retries: ${this.maxConcurrentRetries}`);
-      console.log(`⏳ [DEBUG] Concurrent retry delay: ${this.concurrentRetryDelay}ms`);
+      console.log(`⏳ [DEBUG] Human delay range: ${this.minHumanDelay}-${this.maxHumanDelay}ms`);
       console.log(`📁 [DEBUG] Image directory: ${this.imageDir}`);
     }
+  }
+
+  /**
+   * NEW: Get random interval with human-like variation
+   */
+  getRandomInterval() {
+    // Add 20-50% variation to base interval
+    const variation = 0.2 + (Math.random() * 0.3);
+    return Math.floor(this.baseCheckInterval * (1 + variation));
+  }
+
+  /**
+   * NEW: Add human-like delay
+   */
+  async addHumanDelay(action = 'default') {
+    const delays = {
+      'typing': () => Math.random() * 3000 + 1000, // 1-4 seconds
+      'reading': () => Math.random() * 2000 + 1000, // 1-3 seconds
+      'thinking': () => Math.random() * 5000 + 2000, // 2-7 seconds
+      'default': () => Math.random() * 3000 + 1000  // 1-4 seconds
+    };
+    
+    const delay = delays[action] ? delays[action]() : delays.default();
+    this.debugLog(`🕐 [HUMAN] Adding ${action} delay: ${Math.round(delay)}ms`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+
+  /**
+   * NEW: Enforce rate limiting with human-like variation
+   */
+  async enforceRateLimit() {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    // Add variation to rate limit (±30%)
+    const variation = 0.7 + (Math.random() * 0.6);
+    const requiredDelay = this.rateLimitBase * variation;
+    
+    if (timeSinceLastRequest < requiredDelay) {
+      const waitTime = requiredDelay - timeSinceLastRequest;
+      this.debugLog(`⏳ [RATE] Waiting ${Math.round(waitTime)}ms for rate limit`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequestTime = Date.now();
+    this.requestCount++;
   }
 
   /**
@@ -191,6 +248,9 @@ class MidjourneyClient {
       this.debugLog('🚀 [DEBUG] === STARTING ENHANCED INITIALIZATION ===');
       console.log('Initializing Enhanced Midjourney client...');
       
+      // Add human-like delay
+      await this.addHumanDelay('thinking');
+      
       // Get Guild ID
       this.debugLog('🏢 [DEBUG] Fetching Guild ID from channel...');
       const channelResponse = await this.client.get(`/channels/${this.channelId}`);
@@ -198,12 +258,18 @@ class MidjourneyClient {
       console.log(`Guild ID: ${this.guildId}`);
       this.debugLog(`✅ [DEBUG] Guild ID retrieved: ${this.guildId}`);
 
+      // Add brief human delay
+      await this.addHumanDelay('reading');
+
       // Get User ID
       this.debugLog('👤 [DEBUG] Fetching User ID...');
       const userResponse = await this.client.get('/users/@me');
       this.userId = userResponse.data.id;
       console.log(`User ID: ${this.userId}`);
       this.debugLog(`✅ [DEBUG] User ID retrieved: ${this.userId}`);
+
+      // Another brief human delay
+      await this.addHumanDelay('reading');
 
       // Get application command data
       this.debugLog('⚙️ [DEBUG] Fetching application commands...');
@@ -257,7 +323,7 @@ class MidjourneyClient {
   }
 
   /**
-   * Enhanced imagine method with concurrent job limit handling
+   * Enhanced imagine method with human-like behavior
    */
   async imagine(promptText, promptTags = '') {
     let retryCount = 0;
@@ -271,6 +337,9 @@ class MidjourneyClient {
           this.debugLog(`🔄 [DEBUG] Client not initialized, initializing...`);
           await this.initialize();
         }
+
+        // ADD: Human delay before submitting
+        await this.addHumanDelay('typing');
 
         // Create a unique ID to identify this generation
         const uniqueId = Date.now() - Math.floor(Math.random() * 1000);
@@ -292,6 +361,9 @@ class MidjourneyClient {
         this.debugLog(`📝 [DEBUG] Full prompt: ${prompt}`);
         
         console.log(`Submitting prompt with unique ID ${uniqueId} (attempt ${retryCount + 1})`);
+
+        // ADD: Rate limiting with variation
+        await this.enforceRateLimit();
 
         // Submit the prompt with rate limiting
         if (retryCount > 0) {
@@ -320,14 +392,12 @@ class MidjourneyClient {
           }
         };
 
-// Right before: const response = await this.client.post('/interactions', params);
-console.log('🔍 [DISCORD DEBUG] Sending to Discord:');
-console.log('   Full prompt:', prompt);
-console.log('   Prompt text:', promptText);
-console.log('   Unique ID:', uniqueId);
-console.log('   Prompt tags:', promptTags);
-console.log('   Contains "very"?', prompt.includes('very'));
-
+        console.log('🔍 [DISCORD DEBUG] Sending to Discord:');
+        console.log('   Full prompt:', prompt);
+        console.log('   Prompt text:', promptText);
+        console.log('   Unique ID:', uniqueId);
+        console.log('   Prompt tags:', promptTags);
+        console.log('   Contains "very"?', prompt.includes('very'));
 
         this.debugLog(`📤 [DEBUG] Submitting interaction to Discord...`);
         const response = await this.client.post('/interactions', params);
@@ -335,10 +405,11 @@ console.log('   Contains "very"?', prompt.includes('very'));
         
         this.debugLog(`✅ [DEBUG] Discord response status: ${response.status}`);
         
-        // Wait for initial processing
+        // Wait for initial processing - with random human-like delay
         console.log('Waiting for initial processing...');
-        this.debugLog(`⏳ [DEBUG] Waiting for initial processing (${this.checkInterval}ms)...`);
-        await new Promise(resolve => setTimeout(resolve, this.checkInterval));
+        const initialWaitTime = this.checkInterval * (0.8 + Math.random() * 0.4); // ±20% variation
+        this.debugLog(`⏳ [DEBUG] Waiting for initial processing (${Math.round(initialWaitTime)}ms)...`);
+        await new Promise(resolve => setTimeout(resolve, initialWaitTime));
         
         // Fetch the generated images
         console.log('Checking for generated images...');
@@ -399,310 +470,290 @@ console.log('   Contains "very"?', prompt.includes('very'));
     }
   }
 
-/**
-   * Enhanced checkImagine with better concurrent job detection and handling
-   */
-  async checkImagine(uniqueId, originalPromptText = '') {
-    let attempts = 0;
-    let imagineMessage = null;
-    let progressMessage = null;
-    let lastProgressPercent = 0;
-    let queueDetected = false;
-    let queueStartTime = null;
-    const startTime = Date.now();
+// Enhanced checkImagine with removal of fallback prompt, reduced API calls, and delayed retry
+async checkImagine(uniqueId, originalPromptText = '') {
+  let attempts = 0;
+  let imagineMessage = null;
+  let progressMessage = null;
+  let lastProgressPercent = 0;
+  let queueDetected = false;
+  let queueStartTime = null;
+  const startTime = Date.now();
 
-    this.debugLog(`🔍 [DEBUG] Enhanced image check for unique ID: ${uniqueId}`);
-    console.log(`Looking for image with unique ID: ${uniqueId}`);
-    
-    // For fallback, we'll search for the exact prompt text or a significant portion of it
-    const promptTextForSearch = originalPromptText.trim();
-    const promptPreview = promptTextForSearch.substring(0, 100); // First 100 chars for matching
-    
-    this.debugLog(`🔍 [DEBUG] Exact prompt text for fallback: "${promptTextForSearch}"`);
-    this.debugLog(`🔍 [DEBUG] Prompt preview for matching: "${promptPreview}"`);
-    
-    // ENHANCED: Increase max attempts when queue is detected
-    let maxAttempts = this.maxImagineAttempts;
-    
-    while (!imagineMessage && attempts < maxAttempts) {
-      try {
-        this.debugLog(`\n🔍 [DEBUG] === Enhanced Check Attempt ${attempts + 1}/${maxAttempts} ===`);
-        console.log(`Checking for images (attempt ${attempts + 1}/${maxAttempts})...`);
-        
-        const response = await this.client.get(`/channels/${this.channelId}/messages?limit=20`);
-        const messages = response.data;
-        
-        this.debugLog(`📨 [DEBUG] Retrieved ${messages.length} messages from Discord`);
+  // NEW: Extended check interval for relax mode
+  let currentCheckInterval = this.getRandomInterval() * 2; // Double the interval
+  
+  // NEW: Configure reduced checks
+  let maxInitialAttempts = this.relaxMode ? 3 : 6; // Reduce to 3 checks in relax mode
+  let maxTotalAttempts = this.maxImagineAttempts;
+  let retryAfterLongWait = true; // Flag to enable long-wait retry
 
-        // FIXED: Check for concurrent job limit message but don't throw error immediately
-        for (const message of messages) {
-          const messageContent = message.content.toLowerCase();
-          
-          // Check if this is a concurrent job limit message for our job
-          if ((messageContent.includes('maximum allowed number of concurrent jobs') ||
-               messageContent.includes('concurrent jobs') ||
-               (messageContent.includes('queue') && messageContent.includes('full')) ||
-               messageContent.includes('job queued')) &&
-              message.content.includes(uniqueId.toString())) {
-            
-            if (!queueDetected) {
-              queueDetected = true;
-              queueStartTime = Date.now();
-              // ENHANCED: Increase timeout when queue is detected
-              maxAttempts = Math.max(maxAttempts, 180); // 3 minutes of checking for queued jobs
-              this.debugLog(`🚫 [DEBUG] QUEUE DETECTED - Job is queued, extending timeout to ${maxAttempts} attempts`);
-              console.log('🔄 Job is queued by Midjourney, waiting for it to start processing...');
-              console.log(`⏳ Extended timeout to ${Math.round(maxAttempts * this.checkInterval / 1000)} seconds for queued job`);
-            }
-            
-            // Show queue status
-            const queueTime = Math.round((Date.now() - queueStartTime) / 1000);
-            console.log(`⏳ Job still queued (waiting ${queueTime}s)...`);
-            this.debugLog(`🔄 [DEBUG] Job queued for ${queueTime} seconds`);
-            
-            // Don't throw error, continue waiting
-            break;
-          }
-        }
-
-        // ENHANCED: Look for "job started" or progress messages if we were queued
-        if (queueDetected) {
-          let jobStarted = false;
-          
-          for (const message of messages) {
-            if (message.content.includes(uniqueId.toString())) {
-              // Check if job started processing (progress indicators)
-              if (message.content.includes('(0%)') || 
-                  message.content.includes('(1%)') ||
-                  (message.content.includes('%') && !message.content.toLowerCase().includes('queue'))) {
-                
-                jobStarted = true;
-                queueDetected = false; // Job is no longer queued
-                console.log('✅ Queued job has started processing!');
-                this.debugLog(`✅ [DEBUG] Queued job started processing!`);
-                break;
-              }
-            }
-          }
-        }
-
-        // First try: Look for messages with unique ID (original method)
-        let foundAnyWithId = false;
-        messages.forEach((msg, index) => {
-          if (msg.content.includes(uniqueId.toString())) {
-            foundAnyWithId = true;
-            this.debugLog(`📝 [DEBUG] Message ${index + 1} with unique ID found`);
-            
-            // Skip queue messages - we handle them above
-            const messageContent = msg.content.toLowerCase();
-            if (messageContent.includes('queue') || messageContent.includes('concurrent jobs')) {
-              return; // Skip processing this message
-            }
-            
-            // Check for other error messages in the content
-            const errorType = this.detectErrorType(msg.content);
-            if (errorType.type !== 'UNKNOWN' && errorType.type !== 'CONCURRENT_LIMIT' && !errorType.retryable) {
-              this.debugLog(`❌ [DEBUG] Error message detected: ${errorType.type}`);
-              throw new Error(`Midjourney error: ${msg.content}`);
-            }
-          }
-        });
-
-        // Standard image detection logic continues...
-        for (const item of messages) {
-          if (item.content.includes(uniqueId.toString())) {
-            // Skip queue messages
-            const messageContent = item.content.toLowerCase();
-            if (messageContent.includes('queue') || messageContent.includes('concurrent jobs')) {
-              continue; // Skip queue messages
-            }
-            
-            // Check if message is recent (within last 15 minutes for queued jobs)  
-            const messageTime = new Date(item.timestamp).getTime();
-            const now = Date.now();
-            const messageAge = now - messageTime;
-            const maxAge = queueDetected ? 15 * 60 * 1000 : 10 * 60 * 1000; // 15 min for queued, 10 min for normal
-            
-            if (messageAge > maxAge) {
-              this.debugLog(`⏰ [DEBUG] Skipping old message (${Math.round(messageAge / 60000)} minutes old)`);
-              continue;
-            }
-            
-            // Check if it's a progress message
-            const progressMatch = item.content.match(/\((\d+)%\)/);
-            if (progressMatch) {
-              const percent = parseInt(progressMatch[1]);
-              if (percent > lastProgressPercent) {
-                console.log(`Image generation progress: ${percent}%`);
-                this.debugLog(`📈 [DEBUG] Progress update: ${percent}%`);
-                lastProgressPercent = percent;
-                progressMessage = item;
-                
-                // Reset queue detection once we see progress
-                if (queueDetected && percent > 0) {
-                  queueDetected = false;
-                  console.log('✅ Job started processing (progress detected)');
-                  this.debugLog(`✅ [DEBUG] Job started processing (${percent}% progress)`);
-                }
-              }
-            }
-            
-            // Check if it's a completed message
-            const hasUserMention = item.content.includes(`<@${this.userId}>`);
-            const notWaitingToStart = !item.content.includes('(Waiting to start)');
-            const notPaused = !item.content.includes('(Paused)');
-            const hasAttachments = item.attachments && item.attachments.length > 0;
-            const hasComponents = item.components && item.components.length > 0;
-            const notProcessing = !item.content.match(/\(\d+%\)/);
-            
-            if (hasUserMention && notWaitingToStart && notPaused && notProcessing && (hasAttachments || hasComponents)) {
-              console.log('Found completed message with images!');
-              this.debugLog(`🎉 [DEBUG] *** COMPLETION DETECTED! ***`);
-              
-              return {
-                id: item.id,
-                raw_message: item
-              };
-            }
-          }
-        }
-
-        // SECOND PASS: If unique ID method failed, try exact prompt text fallback
-        if (!foundAnyWithId && promptTextForSearch.length > 0) {
-          this.debugLog(`🔄 [DEBUG] === UNIQUE ID NOT FOUND - TRYING EXACT PROMPT TEXT FALLBACK ===`);
-          console.log('Unique ID not found, trying exact prompt text fallback...');
-          
-          for (const item of messages) {
-            // Check if message contains the exact prompt text or a significant portion of it
-            const messageContent = item.content;
-            
-            // Skip queue messages
-            if (messageContent.toLowerCase().includes('queue') || 
-                messageContent.toLowerCase().includes('concurrent jobs')) {
-              continue;
-            }
-            
-            // Try exact match first
-            const hasExactMatch = messageContent.includes(promptTextForSearch);
-            
-            // Try partial match (first 100 characters) if exact fails
-            const hasPartialMatch = messageContent.includes(promptPreview);
-            
-            // Try even more flexible match (first 80 characters, case insensitive)
-            const flexiblePrompt = promptPreview.substring(0, 80).toLowerCase();
-            const messageContentLower = messageContent.toLowerCase();
-            const hasFlexibleMatch = messageContentLower.includes(flexiblePrompt);
-            
-            const hasGoodMatch = hasExactMatch || hasPartialMatch || hasFlexibleMatch;
-            
-            if (hasGoodMatch) {
-              // Check if message is recent 
-              const messageTime = new Date(item.timestamp).getTime();
-              const now = Date.now();
-              const messageAge = now - messageTime;
-              const maxAge = queueDetected ? 15 * 60 * 1000 : 10 * 60 * 1000; // Extended for queued jobs
-              
-              if (messageAge > maxAge) {
-                this.debugLog(`⏰ [DEBUG] Skipping old message (${Math.round(messageAge / 60000)} minutes old)`);
-                continue;
-              }
-              
-              // Check if it's a progress message
-              const progressMatch = item.content.match(/\((\d+)%\)/);
-              if (progressMatch) {
-                const percent = parseInt(progressMatch[1]);
-                if (percent > lastProgressPercent) {
-                  console.log(`Image generation progress: ${percent}% (via prompt fallback)`);
-                  this.debugLog(`📈 [DEBUG] Progress update via fallback: ${percent}% (was ${lastProgressPercent}%)`);
-                  lastProgressPercent = percent;
-                  progressMessage = item;
-                  
-                  // Reset queue detection once we see progress
-                  if (queueDetected && percent > 0) {
-                    queueDetected = false;
-                    console.log('✅ Job started processing (progress detected via fallback)');
-                    this.debugLog(`✅ [DEBUG] Job started processing via fallback (${percent}% progress)`);
-                  }
-                }
-              }
-              
-              // Check if it's a completed message
-              const hasUserMention = item.content.includes(`<@${this.userId}>`);
-              const notWaitingToStart = !item.content.includes('(Waiting to start)');
-              const notPaused = !item.content.includes('(Paused)');
-              const hasAttachments = item.attachments && item.attachments.length > 0;
-              const hasComponents = item.components && item.components.length > 0;
-              const notProcessing = !item.content.match(/\(\d+%\)/);
-              
-              const allConditionsMet = hasUserMention && 
-                                      notWaitingToStart &&
-                                      notPaused &&
-                                      notProcessing &&
-                                      (hasAttachments || hasComponents);
-              
-              if (allConditionsMet) {
-                console.log('Found completed message with images! (Prompt text fallback method)');
-                this.debugLog(`🎉 [DEBUG] *** COMPLETION DETECTED (PROMPT TEXT FALLBACK METHOD)! ***`);
-                
-                return {
-                  id: item.id,
-                  raw_message: item
-                };
-              }
-            }
-          }
-        }
-
-        // ENHANCED: Show queue status in logs
-        if (queueDetected) {
-          const queueTime = Math.round((Date.now() - queueStartTime) / 1000);
-          if (queueTime % 30 === 0) { // Log every 30 seconds
-            console.log(`⏳ Still waiting for queued job (${queueTime}s elapsed)...`);
-          }
-        }
-
-        // Wait and try again
-        await new Promise(resolve => setTimeout(resolve, this.checkInterval));
-        attempts++;
-        
-      } catch (error) {
-        console.error('Enhanced check imagine error:', error.message);
-        this.debugLog(`❌ [DEBUG] Enhanced check error: ${error.message}`);
-        
-        // REMOVED: Don't re-throw concurrent job limit errors here anymore
-        // We handle them above by extending the timeout
-        
-        if (error.response) {
-          this.debugLog(`❌ [DEBUG] Response status: ${error.response.status}`);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, this.checkInterval));
-        attempts++;
+  this.debugLog(`🔍 [DEBUG] Enhanced image check with reduced API calls for unique ID: ${uniqueId}`);
+  console.log(`Looking for image with unique ID: ${uniqueId} (reduced API checks)`);
+  
+  // REMOVED: Fallback prompt section is completely removed
+  
+  while (!imagineMessage && attempts < maxInitialAttempts) {
+    try {
+      // ADD: Human-like reading delay if not first attempt
+      if (attempts > 0) {
+        await this.addHumanDelay('reading');
       }
-    }
 
-    // Handle progress message or timeout
-    if (progressMessage) {
-      console.log('Returning partial progress message as we reached timeout');
-      this.debugLog(`⚠️ [DEBUG] Returning progress message - timeout reached`);
-      return {
-        id: progressMessage.id,
-        raw_message: progressMessage,
-        in_progress: true
-      };
-    }
+      this.debugLog(`\n🔍 [DEBUG] === Enhanced Check Attempt ${attempts + 1}/${maxInitialAttempts} ===`);
+      console.log(`Checking for images (attempt ${attempts + 1}/${maxInitialAttempts})...`);
+      
+      // ADD: Rate limiting
+      await this.enforceRateLimit();
+      
+      const response = await this.client.get(`/channels/${this.channelId}/messages?limit=20`);
+      const messages = response.data;
+      
+      this.debugLog(`📨 [DEBUG] Retrieved ${messages.length} messages from Discord`);
 
-    // ENHANCED: Better timeout message
-    const totalTimeMinutes = Math.round((Date.now() - startTime) / 60000);
-    let timeoutMessage = `Failed to generate image after ${attempts} attempts (${totalTimeMinutes} minutes)`;
-    
-    if (queueDetected) {
-      timeoutMessage += '. Job was queued by Midjourney but never started processing. This might indicate server issues.';
-    }
+      // Check for concurrent job limit message but don't throw error immediately
+      for (const message of messages) {
+        const messageContent = message.content.toLowerCase();
+        
+        // Check if this is a concurrent job limit message for our job
+        if ((messageContent.includes('maximum allowed number of concurrent jobs') ||
+             messageContent.includes('concurrent jobs') ||
+             (messageContent.includes('queue') && messageContent.includes('full')) ||
+             messageContent.includes('job queued')) &&
+            message.content.includes(uniqueId.toString())) {
+          
+          if (!queueDetected) {
+            queueDetected = true;
+            queueStartTime = Date.now();
+            // ENHANCED: Increase timeout when queue is detected
+            maxInitialAttempts = Math.max(maxInitialAttempts, 4); // Increase to 4 checks for queued jobs
+            this.debugLog(`🚫 [DEBUG] QUEUE DETECTED - Job is queued, extending initial checks to ${maxInitialAttempts} attempts`);
+            console.log('🔄 Job is queued by Midjourney, waiting for it to start processing...');
+          }
+          
+          // Show queue status
+          const queueTime = Math.round((Date.now() - queueStartTime) / 1000);
+          console.log(`⏳ Job still queued (waiting ${queueTime}s)...`);
+          this.debugLog(`🔄 [DEBUG] Job queued for ${queueTime} seconds`);
+          
+          // Don't throw error, continue waiting
+          break;
+        }
+      }
 
-    this.debugLog(`❌ [DEBUG] *** ENHANCED CHECK TIMEOUT ***`);
-    throw new Error(timeoutMessage);
+      // Look for "job started" or progress messages if we were queued
+      if (queueDetected) {
+        let jobStarted = false;
+        
+        for (const message of messages) {
+          if (message.content.includes(uniqueId.toString())) {
+            // Check if job started processing (progress indicators)
+            if (message.content.includes('(0%)') || 
+                message.content.includes('(1%)') ||
+                (message.content.includes('%') && !message.content.toLowerCase().includes('queue'))) {
+              
+              jobStarted = true;
+              queueDetected = false; // Job is no longer queued
+              console.log('✅ Queued job has started processing!');
+              this.debugLog(`✅ [DEBUG] Queued job started processing!`);
+              break;
+            }
+          }
+        }
+      }
+
+      // Look for messages with unique ID (ONLY using ID check, no fallback)
+      let foundAnyWithId = false;
+      messages.forEach((msg, index) => {
+        if (msg.content.includes(uniqueId.toString())) {
+          foundAnyWithId = true;
+          this.debugLog(`📝 [DEBUG] Message ${index + 1} with unique ID found`);
+          
+          // Skip queue messages - we handle them above
+          const messageContent = msg.content.toLowerCase();
+          if (messageContent.includes('queue') || messageContent.includes('concurrent jobs')) {
+            return; // Skip processing this message
+          }
+          
+          // Check for other error messages in the content
+          const errorType = this.detectErrorType(msg.content);
+          if (errorType.type !== 'UNKNOWN' && errorType.type !== 'CONCURRENT_LIMIT' && !errorType.retryable) {
+            this.debugLog(`❌ [DEBUG] Error message detected: ${errorType.type}`);
+            throw new Error(`Midjourney error: ${msg.content}`);
+          }
+        }
+      });
+
+      // Standard image detection logic continues...
+      for (const item of messages) {
+        if (item.content.includes(uniqueId.toString())) {
+          // Skip queue messages
+          const messageContent = item.content.toLowerCase();
+          if (messageContent.includes('queue') || messageContent.includes('concurrent jobs')) {
+            continue; // Skip queue messages
+          }
+          
+          // Check if message is recent (within last 15 minutes for queued jobs)  
+          const messageTime = new Date(item.timestamp).getTime();
+          const now = Date.now();
+          const messageAge = now - messageTime;
+          const maxAge = queueDetected ? 15 * 60 * 1000 : 10 * 60 * 1000; // 15 min for queued, 10 min for normal
+          
+          if (messageAge > maxAge) {
+            this.debugLog(`⏰ [DEBUG] Skipping old message (${Math.round(messageAge / 60000)} minutes old)`);
+            continue;
+          }
+          
+          // Check if it's a progress message
+          const progressMatch = item.content.match(/\((\d+)%\)/);
+          if (progressMatch) {
+            const percent = parseInt(progressMatch[1]);
+            if (percent > lastProgressPercent) {
+              console.log(`Image generation progress: ${percent}%`);
+              this.debugLog(`📈 [DEBUG] Progress update: ${percent}%`);
+              lastProgressPercent = percent;
+              progressMessage = item;
+              
+              // Reset queue detection once we see progress
+              if (queueDetected && percent > 0) {
+                queueDetected = false;
+                console.log('✅ Job started processing (progress detected)');
+                this.debugLog(`✅ [DEBUG] Job started processing (${percent}% progress)`);
+              }
+            }
+          }
+          
+          // Check if it's a completed message
+          const hasUserMention = item.content.includes(`<@${this.userId}>`);
+          const notWaitingToStart = !item.content.includes('(Waiting to start)');
+          const notPaused = !item.content.includes('(Paused)');
+          const hasAttachments = item.attachments && item.attachments.length > 0;
+          const hasComponents = item.components && item.components.length > 0;
+          const notProcessing = !item.content.match(/\(\d+%\)/);
+          
+          if (hasUserMention && notWaitingToStart && notPaused && notProcessing && (hasAttachments || hasComponents)) {
+            console.log('Found completed message with images!');
+            this.debugLog(`🎉 [DEBUG] *** COMPLETION DETECTED! ***`);
+            
+            return {
+              id: item.id,
+              raw_message: item
+            };
+          }
+        }
+      }
+
+      // REMOVED: Entire fallback prompt section
+
+      // Show queue status in logs
+      if (queueDetected) {
+        const queueTime = Math.round((Date.now() - queueStartTime) / 1000);
+        if (queueTime % 30 === 0) { // Log every 30 seconds
+          console.log(`⏳ Still waiting for queued job (${queueTime}s elapsed)...`);
+        }
+      }
+
+      // Larger interval between checks
+      currentCheckInterval = this.getRandomInterval() * 2.5; // 2.5x longer intervals
+      
+      this.debugLog(`⏰ [ADAPTIVE] Next check in ${Math.round(currentCheckInterval)}ms`);
+      await new Promise(resolve => setTimeout(resolve, currentCheckInterval));
+      attempts++;
+      
+    } catch (error) {
+      console.error('Enhanced check imagine error:', error.message);
+      this.debugLog(`❌ [DEBUG] Enhanced check error: ${error.message}`);
+      
+      if (error.response) {
+        this.debugLog(`❌ [DEBUG] Response status: ${error.response.status}`);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, this.checkInterval * 2));
+      attempts++;
+    }
   }
+
+  // NEW: Add extended wait and retry mechanism
+  if (!imagineMessage && retryAfterLongWait) {
+    const longWaitDuration = 4 * 60 * 1000; // 4 minutes wait
+    console.log(`\n⏳ No image found after ${attempts} attempts. Waiting ${longWaitDuration/60000} minutes before final check...`);
+    this.debugLog(`⏳ [DEBUG] === ENTERING EXTENDED WAIT PERIOD (${longWaitDuration/60000} min) ===`);
+    
+    // Wait for 4 minutes
+    await new Promise(resolve => setTimeout(resolve, longWaitDuration));
+    
+    // Try one final check with a larger limit to find older messages
+    try {
+      console.log(`Performing final check for image with ID ${uniqueId}...`);
+      this.debugLog(`🔍 [DEBUG] === PERFORMING FINAL CHECK AFTER EXTENDED WAIT ===`);
+      
+      // Rate limiting
+      await this.enforceRateLimit();
+      
+      // Use larger limit (30) to find possibly older messages
+      const response = await this.client.get(`/channels/${this.channelId}/messages?limit=30`);
+      const messages = response.data;
+      
+      this.debugLog(`📨 [DEBUG] Retrieved ${messages.length} messages for final check`);
+      
+      // Check all messages for our unique ID
+      for (const item of messages) {
+        if (item.content.includes(uniqueId.toString())) {
+          // Skip queue/error messages
+          const messageContent = item.content.toLowerCase();
+          if (messageContent.includes('queue') || 
+              messageContent.includes('concurrent jobs') ||
+              messageContent.includes('error')) {
+            continue;
+          }
+          
+          // Check if it's a completed message
+          const hasUserMention = item.content.includes(`<@${this.userId}>`);
+          const hasAttachments = item.attachments && item.attachments.length > 0;
+          const hasComponents = item.components && item.components.length > 0;
+          const notProcessing = !item.content.match(/\(\d+%\)/);
+          
+          if (hasUserMention && notProcessing && (hasAttachments || hasComponents)) {
+            console.log('✅ Found completed message with images after extended wait!');
+            this.debugLog(`🎉 [DEBUG] *** COMPLETION DETECTED AFTER EXTENDED WAIT! ***`);
+            
+            return {
+              id: item.id,
+              raw_message: item
+            };
+          }
+        }
+      }
+      
+      this.debugLog(`❌ [DEBUG] Final check failed to find image`);
+    } catch (error) {
+      console.error('Final check error:', error.message);
+      this.debugLog(`❌ [DEBUG] Final check error: ${error.message}`);
+    }
+  }
+
+  // Handle progress message or timeout
+  if (progressMessage) {
+    console.log('Returning partial progress message as we reached timeout');
+    this.debugLog(`⚠️ [DEBUG] Returning progress message - timeout reached`);
+    return {
+      id: progressMessage.id,
+      raw_message: progressMessage,
+      in_progress: true
+    };
+  }
+
+  // Better timeout message
+  const totalTimeMinutes = Math.round((Date.now() - startTime) / 60000);
+  let timeoutMessage = `Failed to generate image after initial ${attempts} attempts and extended wait (${totalTimeMinutes} minutes total)`;
+  
+  if (queueDetected) {
+    timeoutMessage += '. Job was queued by Midjourney but never started processing. This might indicate server issues.';
+  }
+
+  this.debugLog(`❌ [DEBUG] *** ENHANCED CHECK TIMEOUT ***`);
+  throw new Error(timeoutMessage);
+}
 
   // Extract grid images - WITH DEBUG (FIXED - NO DELAY, DOWNLOAD IMMEDIATELY)
   async extractGridImages(message) {
@@ -906,6 +957,11 @@ console.log('   Contains "very"?', prompt.includes('very'));
 
     while (!upscaledPhotoUrl && attempts < this.maxUpscaleAttempts) {
       try {
+        // Add human-like delay between checks
+        if (attempts > 0) {
+          await this.addHumanDelay('reading');
+        }
+
         this.debugLog(`\n🔍 [DEBUG] === Upscale Check Attempt ${attempts + 1}/${this.maxUpscaleAttempts} ===`);
         console.log(`Checking for upscaled image (attempt ${attempts + 1}/${this.maxUpscaleAttempts})...`);
         
@@ -915,6 +971,9 @@ console.log('   Contains "very"?', prompt.includes('very'));
           this.debugLog(`⏳ [DEBUG] Waiting 5 seconds for upscale processing...`);
           await new Promise(resolve => setTimeout(resolve, 5000)); // Reduced to 5 seconds
         }
+        
+        // Add rate limiting
+        await this.enforceRateLimit();
         
         const response = await this.client.get(`/channels/${this.channelId}/messages?limit=20`);
         const items = response.data;
@@ -981,9 +1040,18 @@ console.log('   Contains "very"?', prompt.includes('very'));
           }
         }
 
-        // Wait and try again
-        this.debugLog(`⏳ [DEBUG] Waiting ${this.checkInterval}ms before next attempt...`);
-        await new Promise(resolve => setTimeout(resolve, this.checkInterval));
+        // NEW: Adaptive check interval - increase delay between checks
+        let currentCheckInterval;
+        if (attempts < 5) {
+          currentCheckInterval = this.checkInterval;
+        } else if (attempts < 10) {
+          currentCheckInterval = this.checkInterval * 1.5;
+        } else {
+          currentCheckInterval = this.checkInterval * 2;
+        }
+        
+        this.debugLog(`⏳ [DEBUG] Waiting ${currentCheckInterval}ms before next attempt...`);
+        await new Promise(resolve => setTimeout(resolve, currentCheckInterval));
         attempts++;
       } catch (error) {
         console.error('Check upscale error:', error.message);
@@ -1160,7 +1228,16 @@ console.log('   Contains "very"?', prompt.includes('very'));
     
     while (attempts < this.maxImagineAttempts) {
       try {
+        // Add human-like delay
+        if (attempts > 0) {
+          await this.addHumanDelay('reading');
+        }
+
         this.debugLog(`\n🔍 [DEBUG] === Relax Wait Attempt ${attempts + 1}/${this.maxImagineAttempts} ===`);
+        
+        // Add rate limiting
+        await this.enforceRateLimit();
+        
         const response = await this.client.get(`/channels/${this.channelId}/messages?limit=20`);
         const messages = response.data;
         
@@ -1199,8 +1276,18 @@ console.log('   Contains "very"?', prompt.includes('very'));
           }
         }
         
-        this.debugLog(`⏳ [DEBUG] Waiting ${this.checkInterval}ms before next attempt...`);
-        await new Promise(resolve => setTimeout(resolve, this.checkInterval));
+        // NEW: Adaptive check interval
+        let currentCheckInterval;
+        if (attempts < 5) {
+          currentCheckInterval = this.getRandomInterval();
+        } else if (attempts < 10) {
+          currentCheckInterval = this.getRandomInterval() * 1.5;
+        } else {
+          currentCheckInterval = this.getRandomInterval() * 2;
+        }
+        
+        this.debugLog(`⏳ [DEBUG] Waiting ${currentCheckInterval}ms before next attempt...`);
+        await new Promise(resolve => setTimeout(resolve, currentCheckInterval));
         attempts++;
       } catch (error) {
         console.error('Error while waiting for completed image:', error.message);
@@ -1293,75 +1380,71 @@ console.log('   Contains "very"?', prompt.includes('very'));
   }
 
   /**
-   * Enhanced createImage method with comprehensive error handling
+   * REPLACED: Enhanced createImage method with simplified flow (no upscaling)
    */
   async createImage(promptText, promptTags = '', upscaleIndex = null) {
     try {
-      this.debugLog(`\n🚀 [DEBUG] === STARTING ENHANCED CREATE IMAGE PROCESS ===`);
+      this.debugLog(`\n🚀 [DEBUG] Starting simplified image creation (no upscaling)`);
       console.log(`Generating image for prompt: ${promptText}`);
+      
+      // ADD: Initial human delay
+      await this.addHumanDelay('thinking');
       
       const imagineResult = await this.imagine(promptText, promptTags);
       
-      this.debugLog(`📨 [DEBUG] === ENHANCED IMAGINE RESULT ===`);
-      this.debugLog(`🆔 [DEBUG] Message ID: ${imagineResult.id}`);
+      this.debugLog(`📨 [DEBUG] Imagine result received`);
       
-      // Extract and save the grid with all 4 options
+      // Extract and save the grid
       const gridResult = await this.extractGridImages(imagineResult);
       
       const result = {
-        imagine_message_id: imagineResult.id,
-        raw_message: imagineResult.raw_message,
-        grid_info: gridResult,
-        options: []
+          imagine_message_id: imagineResult.id,
+          raw_message: imagineResult.raw_message,
+          grid_info: gridResult,
+          options: []
       };
       
       if (gridResult) {
-        console.log('Successfully extracted grid with options:');
-        this.debugLog(`✅ [DEBUG] Successfully extracted grid`);
-        
-        for (const option of gridResult.options) {
-          console.log(`- Option ${option.index + 1}: ${option.label}`);
-          result.options.push({
-            index: option.index,
-            custom_id: option.custom_id,
-            label: option.label
-          });
-        }
-        
-        result.upscaled_photo_url = gridResult.grid_url;
-        result.note = "Grid image used as final result (enhanced processing)";
-        
+          console.log('Successfully extracted grid image');
+          this.debugLog(`✅ [DEBUG] Grid image extracted successfully`);
+          
+          // Return the grid as the final result (no upscaling)
+          result.upscaled_photo_url = gridResult.grid_url;
+          result.note = "Grid image (4 variations) - users can select/crop as needed";
+          
+          // Still provide options info for UI
+          if (gridResult.options) {
+              result.options = gridResult.options.map(opt => ({
+                  index: opt.index,
+                  label: opt.label || `Option ${opt.index + 1}`
+              }));
+          }
       } else {
-        console.log('Failed to extract grid images');
-        this.debugLog(`❌ [DEBUG] Failed to extract grid images`);
-        
-        // Fallback: use the first attachment if available
-        if (imagineResult.raw_message.attachments && imagineResult.raw_message.attachments.length > 0) {
-          const fallbackUrl = imagineResult.raw_message.attachments[0].url;
-          console.log('Using first attachment as fallback');
-          this.debugLog(`🔄 [DEBUG] Using first attachment as fallback: ${fallbackUrl}`);
-          result.upscaled_photo_url = fallbackUrl;
-          result.note = "First attachment used as fallback (enhanced)";
-        }
+          // Fallback to first attachment
+          if (imagineResult.raw_message.attachments && imagineResult.raw_message.attachments.length > 0) {
+              const fallbackUrl = imagineResult.raw_message.attachments[0].url;
+              result.upscaled_photo_url = fallbackUrl;
+              result.note = "Image generated successfully";
+          }
       }
       
-      this.debugLog(`✅ [DEBUG] === ENHANCED CREATE IMAGE COMPLETED ===`);
+      this.debugLog(`✅ [DEBUG] Image creation completed (simplified flow)`);
       return result;
       
     } catch (error) {
-      console.error('Enhanced image creation failed:', error.message);
-      this.debugLog(`❌ [DEBUG] === ENHANCED CREATE IMAGE FAILED ===`);
-      this.debugLog(`❌ [DEBUG] Error: ${error.message}`);
-      
-      // Provide enhanced error context
-      const errorType = this.detectErrorType(error.message);
-      if (errorType.type === 'CONCURRENT_LIMIT') {
-        error.message = `Unable to process image request: ${error.message}`;
-        error.retryable = true;
-        error.retryAfter = this.concurrentRetryDelay;
-      }
-      
-      throw error;
+        console.error('Image creation failed:', error.message);
+        this.debugLog(`❌ [DEBUG] === ENHANCED CREATE IMAGE FAILED ===`);
+        this.debugLog(`❌ [DEBUG] Error: ${error.message}`);
+        
+        // Provide enhanced error context
+        const errorType = this.detectErrorType(error.message);
+        if (errorType.type === 'CONCURRENT_LIMIT') {
+          error.message = `Unable to process image request: ${error.message}`;
+          error.retryable = true;
+          error.retryAfter = this.concurrentRetryDelay;
+        }
+        
+        throw error;
     }
   }
 
@@ -1377,6 +1460,9 @@ console.log('   Contains "very"?', prompt.includes('very'));
     this.debugLog(`📨 [DEBUG] Message ID: ${message.id}`);
     this.debugLog(`🔢 [DEBUG] Upscale index: ${upscaleIndex !== null ? upscaleIndex : 'random'}`);
     this.debugLog(`⏳ [DEBUG] In progress: ${!!message.in_progress}`);
+
+    // Add human-like delay
+    await this.addHumanDelay('thinking');
 
     // If the message indicates it's still in progress (relax mode)
     if (message.in_progress) {
@@ -1431,6 +1517,12 @@ console.log('   Contains "very"?', prompt.includes('very'));
       console.log(`Using upscale hash: ${upscaleHash}`);
       this.debugLog(`🎯 [DEBUG] Using upscale hash: ${upscaleHash}`);
 
+      // Add human-like typing delay
+      await this.addHumanDelay('typing');
+
+      // Add rate limiting
+      await this.enforceRateLimit();
+
       // Submit the upscale request
       const params = {
         type: 3,
@@ -1475,6 +1567,12 @@ console.log('   Contains "very"?', prompt.includes('very'));
   async checkQueueStatus() {
     try {
       this.debugLog('🔍 [DEBUG] Checking Midjourney queue status...');
+      
+      // Add human-like delay
+      await this.addHumanDelay('reading');
+      
+      // Add rate limiting
+      await this.enforceRateLimit();
       
       const response = await this.client.get(`/channels/${this.channelId}/messages?limit=10`);
       const messages = response.data;
@@ -1521,6 +1619,12 @@ console.log('   Contains "very"?', prompt.includes('very'));
       if (!this.userId || !this.guildId) {
         await this.initialize();
       }
+      
+      // Add human-like delay
+      await this.addHumanDelay('reading');
+      
+      // Add rate limiting
+      await this.enforceRateLimit();
       
       // Get recent messages
       const response = await this.client.get(`/channels/${this.channelId}/messages?limit=10`);
@@ -1588,7 +1692,7 @@ module.exports = {
       
       const relaxMode = process.env.MIDJOURNEY_RELAX_MODE === 'true' || true;
       
-      console.log('Creating new Enhanced MidjourneyClient instance...');
+      console.log('Creating new Enhanced MidjourneyClient instance with human-like behavior...');
       instance = new MidjourneyClient(channelId, userToken, relaxMode, true);
     }
     return instance;

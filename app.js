@@ -692,7 +692,7 @@ function formatIngredientsForMidjourney(ingredientsList) {
 // Final, optimized generateFacebookContent function
 // Modified generateFacebookContent function for app.js
 
-async function generateFacebookContent(recipeIdea) {
+async function generateFacebookContent(recipeIdea, imageUrl = null) {
   console.log(chalk.cyan(`\nGenerating Facebook content for: ${recipeIdea}`));
   
   // Generate the full recipe
@@ -756,23 +756,32 @@ async function generateFacebookContent(recipeIdea) {
     fullRecipe: recipe
   };
   
-  // Generate Midjourney prompt
-  console.log(chalk.gray('Creating Midjourney prompt...'));
-  
-  // Translate if needed
-  let translatedTitle = title;
-  let translatedIngredients = allIngredients;
-  
-  if (config.language.toLowerCase() !== 'english') {
-    console.log(chalk.gray('Translating to English...'));
-    translatedTitle = await translateToEnglish(title);
-    translatedIngredients = await translateToEnglish(allIngredients);
-  }
-  
-  const mjPrompt = replaceVars(config.prompts.mjTemplate, {
-    title: translatedTitle,
-    ingredients: translatedIngredients
-  });
+// Generate Midjourney prompt
+console.log(chalk.gray('Creating Midjourney prompt...'));
+
+// Translate if needed
+let translatedTitle = title;
+let translatedIngredients = allIngredients;
+
+if (config.language.toLowerCase() !== 'english') {
+  console.log(chalk.gray('Translating to English...'));
+  translatedTitle = await translateToEnglish(title);
+  translatedIngredients = await translateToEnglish(allIngredients);
+}
+
+let mjPrompt = replaceVars(config.prompts.mjTemplate, {
+  title: translatedTitle,
+  ingredients: translatedIngredients
+});
+
+// Add image URL to the beginning of the prompt with correct Midjourney syntax
+if (imageUrl && imageUrl.trim() !== '') {
+  mjPrompt = `${imageUrl.trim()} ${mjPrompt}`;
+  console.log(chalk.gray(`🖼️ Added image URL to Midjourney prompt: ${imageUrl}`));
+  console.log(chalk.gray(`🎯 Final MJ prompt starts with: ${mjPrompt.substring(0, 100)}...`));
+} else {
+  console.log(chalk.gray('🖼️ No image URL provided for Midjourney prompt'));
+}
   
   console.log(chalk.gray('Midjourney prompt generated:'));
   console.log(chalk.gray(mjPrompt.substring(0, 100) + '...'));
@@ -804,7 +813,8 @@ async function generateFacebookContent(recipeIdea) {
     instructionsList,
     mjPrompt,
     fbCaption,
-    translatedCaption
+    translatedCaption,
+    imageUrl
   };
   
   // After successful generation, send Discord notification
@@ -1127,7 +1137,7 @@ function formatIngredientsForMidjourney(ingredientsList) {
 }
 
 // Let's incorporate this into the generateFacebookContent function
-async function generateFacebookContent(recipeIdea) {
+async function generateFacebookContent(recipeIdea, imageUrl = null) {
   console.log(chalk.cyan(`\nGenerating Facebook content for: ${recipeIdea}`));
   
   // Generate the full recipe
@@ -1191,10 +1201,19 @@ async function generateFacebookContent(recipeIdea) {
   
   // Generate Midjourney prompt
   console.log(chalk.gray('Creating Midjourney prompt...'));
-  const mjPrompt = replaceVars(config.prompts.mjTemplate, {
+  let mjPrompt = replaceVars(config.prompts.mjTemplate, {
     title: translatedTitle,
     ingredients: translatedIngredients // Now contains only formatted ingredients
   });
+  
+  // Add image URL to the beginning of the prompt with correct Midjourney syntax
+  if (imageUrl && imageUrl.trim() !== '') {
+    mjPrompt = `${imageUrl.trim()} ${mjPrompt}`;
+    console.log(chalk.gray(`🖼️ Added image URL to Midjourney prompt: ${imageUrl}`));
+    console.log(chalk.gray(`🎯 Final MJ prompt starts with: ${mjPrompt.substring(0, 100)}...`));
+  } else {
+    console.log(chalk.gray('🖼️ No image URL provided for Midjourney prompt'));
+  }
   
   // Generate Facebook caption
   console.log(chalk.gray('Creating Facebook caption...'));
@@ -1223,7 +1242,8 @@ async function generateFacebookContent(recipeIdea) {
     instructionsList,
     mjPrompt,
     fbCaption,
-    translatedCaption
+    translatedCaption,
+    imageUrl
   };
 }
 
@@ -1473,7 +1493,7 @@ function formatBlogContent(content) {
 // Fix for the Midjourney prompt in app.js
 // We need to modify the generateFacebookContent function to properly extract only ingredients
 
-async function generateFacebookContent(recipeIdea) {
+async function generateFacebookContent(recipeIdea, imageUrl = null) {
   console.log(chalk.cyan(`\nGenerating Facebook content for: ${recipeIdea}`));
   
   // Generate the full recipe
@@ -1539,10 +1559,19 @@ async function generateFacebookContent(recipeIdea) {
   
   // IMPORTANT FIX: Use only the ingredients for the Midjourney prompt,
   // not the full recipe text or preparation steps
-  const mjPrompt = replaceVars(config.prompts.mjTemplate, {
+  let mjPrompt = replaceVars(config.prompts.mjTemplate, {
     title: translatedTitle,
     ingredients: translatedIngredients  // This now contains only the ingredients list, not preparation steps
   });
+  
+  // Add image URL to the beginning of the prompt with correct Midjourney syntax
+  if (imageUrl && imageUrl.trim() !== '') {
+    mjPrompt = `${imageUrl.trim()} ${mjPrompt}`;
+    console.log(chalk.gray(`🖼️ Added image URL to Midjourney prompt: ${imageUrl}`));
+    console.log(chalk.gray(`🎯 Final MJ prompt starts with: ${mjPrompt.substring(0, 100)}...`));
+  } else {
+    console.log(chalk.gray('🖼️ No image URL provided for Midjourney prompt'));
+  }
   
   // Generate Facebook caption
   console.log(chalk.gray('Creating Facebook caption...'));
@@ -1571,7 +1600,8 @@ async function generateFacebookContent(recipeIdea) {
     instructionsList,
     mjPrompt,
     fbCaption,
-    translatedCaption
+    translatedCaption,
+    imageUrl
   };
 }
 
@@ -1692,7 +1722,7 @@ config.apiKey = apiKey; // Set the key in the config
   
   // Always generate Facebook content first if it's going to be needed
   if (action === 'facebook' || action === 'all') {
-    results.facebook = await generateFacebookContent(recipeIdea);
+    results.facebook = await generateFacebookContent(recipeIdea, null);
   }
   
   if (action === 'pinterest' || action === 'all') {

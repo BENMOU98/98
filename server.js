@@ -1563,14 +1563,13 @@ app.get('/midjourney-filter-admin', isAuthenticated, isAdmin, (req, res) => {
   });
 });
 
-// Recipe browser page
-// Recipe browser page - Updated version with limit variable
+// Updated /recipes route in server.js - Replace your existing route with this
 app.get('/recipes', isAuthenticated, isResourceOwner, async (req, res) => {
   try {
     // Get search parameters
     const searchTerm = req.query.search || '';
     const page = parseInt(req.query.page) || 1;
-    const limit = 20; // Define the limit
+    const limit = 20;
     const offset = (page - 1) * limit;
     
     // Use the filters set by isResourceOwner middleware
@@ -1591,16 +1590,47 @@ app.get('/recipes', isAuthenticated, isResourceOwner, async (req, res) => {
         recipes = await recipeDb.getRecipesByOrg(req.session.user.organizationId, limit, offset);
       }
     }
+
+    // Fetch associated social media content for each recipe
+    const recipesWithContent = await Promise.all(recipes.map(async (recipe) => {
+      try {
+        // Get Facebook content
+        const facebookContent = await facebookDb.getFacebookContentByRecipeId(
+          recipe.id, 
+          req.session.user.organizationId, 
+          req.session.user.role === 'employee' ? req.session.user.id : null
+        );
+        
+        // Get Pinterest variations (get the first one for display)
+        const pinterestVariations = await pinterestDb.getVariationsByRecipeId(recipe.id);
+        const firstPinterestVariation = pinterestVariations && pinterestVariations.length > 0 ? pinterestVariations[0] : null;
+        
+        return {
+          ...recipe,
+          facebook: facebookContent,
+          pinterest: firstPinterestVariation,
+          pinterestCount: pinterestVariations ? pinterestVariations.length : 0
+        };
+      } catch (contentError) {
+        console.warn(`Error fetching content for recipe ${recipe.id}:`, contentError.message);
+        return {
+          ...recipe,
+          facebook: null,
+          pinterest: null,
+          pinterestCount: 0
+        };
+      }
+    }));
     
     res.render('recipes', { 
-      recipes,
+      recipes: recipesWithContent,
       searchTerm,
       pageTitle: 'Browse Recipes',
       activePage: 'recipes',
       title: 'RecipeGen AI - Recipe Browser',
       currentPage: page,
-      totalPages: 1, // You can update this if you implement pagination
-      limit: limit   // Pass the limit variable to the template
+      totalPages: 1,
+      limit: limit
     });
   } catch (error) {
     console.error('Error loading recipes:', error);
@@ -2403,32 +2433,35 @@ app.post('/api/keywords/add', isAuthenticated, activityMiddleware.logActivity('c
         .map(line => line.trim())
         .filter(line => line.length > 0)
         .map(line => ({ 
-          keyword: line,
-          category: req.body.defaultCategory || null,
-          interests: req.body.defaultInterests || null,
-          ownerId: ownerId,
-          organizationId: organizationId
-        }));
+  keyword: line,
+  category: req.body.defaultCategory || null,
+  interests: req.body.defaultInterests || null,
+  image_url: req.body.imageUrl || null, // Add image URL
+  ownerId: ownerId,
+  organizationId: organizationId
+}));
       console.log('Processed string keywords as:', keywordsData);
     } else if (req.body.keywords && Array.isArray(req.body.keywords)) {
       // Data is already in the correct format (from JavaScript handler)
       keywordsData = req.body.keywords.map(keyword => {
         if (typeof keyword === 'string') {
           return {
-            keyword: keyword.trim(),
-            category: req.body.defaultCategory || null,
-            interests: req.body.defaultInterests || null,
-            ownerId: ownerId,
-            organizationId: organizationId
-          };
+  keyword: keyword.trim(),
+  category: req.body.defaultCategory || null,
+  interests: req.body.defaultInterests || null,
+  image_url: req.body.imageUrl || null, // Add image URL
+  ownerId: ownerId,
+  organizationId: organizationId
+};
         } else if (typeof keyword === 'object' && keyword.keyword) {
-          return {
-            keyword: keyword.keyword.trim(),
-            category: keyword.category || req.body.defaultCategory || null,
-            interests: keyword.interests || req.body.defaultInterests || null,
-            ownerId: ownerId,
-            organizationId: organizationId
-          };
+         return {
+  keyword: keyword.keyword.trim(),
+  category: keyword.category || req.body.defaultCategory || null,
+  interests: keyword.interests || req.body.defaultInterests || null,
+  image_url: keyword.image_url || req.body.imageUrl || null, // Add image URL
+  ownerId: ownerId,
+  organizationId: organizationId
+};
         }
         return null;
       }).filter(k => k !== null && k.keyword && k.keyword.trim().length > 0);
@@ -2561,7 +2594,8 @@ app.post('/api/keywords/process-selected', isAuthenticated, activityMiddleware.l
           language: promptConfig.language || 'English',
           ownerId: userId,
           organizationId: organizationId,
-          websiteId: websiteId // Explicitly pass websiteId
+          websiteId: websiteId, // Explicitly pass websiteId
+          image_url: keyword.image_url // Pass the image URL to the recipe
         });
         
         console.log(`✅ Created recipe with ID: ${recipeId}`);
@@ -2579,11 +2613,15 @@ app.post('/api/keywords/process-selected', isAuthenticated, activityMiddleware.l
         
         let contentGenerated = false;
         
-        // Generate content based on selected option
-        if (contentOption === 'facebook' || contentOption === 'all') {
-          try {
-            console.log(`📱 Generating Facebook content for: "${keyword.keyword}"`);
-            const facebookContent = await appModule.generateFacebookContent(keyword.keyword);
+if (contentOption === 'facebook' || contentOption === 'all') {
+  try {
+    console.log(`📱 Generating Facebook content for: "${keyword.keyword}"`);
+    
+    // Use image_url (with underscore) instead of imageurl
+    const imageurl = keyword.image_url || null;
+    console.log(`🖼️ Image URL for keyword: ${imageurl}`);
+    
+    const facebookContent = await generateFacebookContent(keyword.keyword, imageurl);
             
             if (facebookContent) {
               // Save Facebook content with explicit websiteId

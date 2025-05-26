@@ -1,4 +1,4 @@
-// midjourney/image-generator.js (COMPLETE ENHANCED VERSION)
+// midjourney/image-generator.js (FIXED VERSION - Correct Image URL Syntax)
 const MidjourneyClient = require('./midjourney-client');
 const promptFilter = require('./prompt-filter'); 
 const { getOne, getAll, runQuery } = require('../db');
@@ -7,14 +7,12 @@ const path = require('path');
 const fs = require('fs');
 
 /**
- * Generate prompt from recipe data
+ * Generate prompt from recipe data - FIXED: Correct Midjourney image URL syntax
  * @param {Object} recipe - Recipe data
+ * @param {string} imageUrl - Optional image URL for reference
  * @returns {string} Generated prompt
  */
-function generatePrompt(recipe) {
-  // Base prompt for food photography
-  const basePrompt = "Professional food photography of ";
-  
+function generatePrompt(recipe, imageUrl = null) {
   // Use recipe_idea instead of title
   const recipeIdea = recipe.recipe_idea || '';
   
@@ -47,7 +45,7 @@ function generatePrompt(recipe) {
   }
   
   // Create the core prompt with the recipe idea
-  let prompt = `${basePrompt}${recipeIdea}`;
+  let prompt = `Professional food photography of ${recipeIdea}`;
   
   // Add ingredients if available
   if (ingredients) {
@@ -56,6 +54,15 @@ function generatePrompt(recipe) {
   
   // Add styling details for better food photography
   prompt += ", on a beautiful plate, soft natural lighting, shallow depth of field, high-end restaurant presentation, professional food photography, 4k, detailed, award-winning food photography";
+  
+  // FIXED: Correct Midjourney syntax for image URLs
+  // Image URL should go at the BEGINNING, not at the end with --seed
+  if (imageUrl && imageUrl.trim()) {
+    console.log(`🖼️ [PROMPT] Adding reference image URL: ${imageUrl.trim()}`);
+    // Put image URL at the start, followed by the prompt, then image weight parameter
+    prompt = `${imageUrl.trim()} ${prompt} --iw 0.75`;
+    console.log(`🖼️ [PROMPT] Final prompt with image: ${prompt}`);
+  }
   
   return prompt;
 }
@@ -119,7 +126,47 @@ function filterPromptForMidjourney(originalPrompt, options = {}) {
 }
 
 /**
- * ENHANCED: Generate image for recipe with Discord settings support
+ * FIXED: Helper function to add image URL to existing prompt with correct syntax
+ * @param {string} existingPrompt - The existing prompt text
+ * @param {string} imageUrl - The image URL to add
+ * @returns {string} Updated prompt with correct image URL syntax
+ */
+function addImageUrlToPrompt(existingPrompt, imageUrl) {
+  if (!imageUrl || !imageUrl.trim()) {
+    return existingPrompt;
+  }
+  
+  const cleanImageUrl = imageUrl.trim();
+  
+  // Check if image URL is already in the prompt (at the beginning)
+  if (existingPrompt.startsWith(cleanImageUrl)) {
+    console.log('🖼️ [PROMPT] Image URL already present in prompt');
+    return existingPrompt;
+  }
+  
+  // Check if prompt already has an image URL at the beginning (starts with http)
+  if (existingPrompt.startsWith('http')) {
+    console.log('🖼️ [PROMPT] Prompt already has an image URL, replacing it');
+    // Find the end of the existing URL (first space after http)
+    const firstSpaceIndex = existingPrompt.indexOf(' ');
+    if (firstSpaceIndex > 0) {
+      const restOfPrompt = existingPrompt.substring(firstSpaceIndex + 1);
+      return `${cleanImageUrl} ${restOfPrompt}`;
+    }
+  }
+  
+  // Add image URL to the beginning with correct syntax
+  console.log(`🖼️ [PROMPT] Adding image URL to beginning of prompt: ${cleanImageUrl}`);
+  
+  // Remove any existing --iw parameter to avoid duplication
+  let cleanPrompt = existingPrompt.replace(/--iw\s+[\d.]+/g, '').trim();
+  
+  // Add image URL at the beginning with image weight parameter
+  return `${cleanImageUrl} ${cleanPrompt} --iw 0.75`;
+}
+
+/**
+ * ENHANCED: Generate image for recipe with Discord settings support - FIXED IMAGE URL HANDLING
  * @param {integer} recipeId - Recipe ID
  * @param {Object} discordSettings - Discord settings object
  * @returns {Object} Result with status and image information
@@ -156,6 +203,18 @@ async function generateImageForRecipeWithSettings(recipeId, discordSettings = nu
       };
     }
     
+    const keyword = await getOne(
+  "SELECT * FROM keywords WHERE recipe_id = ? ORDER BY added_at DESC LIMIT 1", 
+  [recipeId]
+);
+    
+    const imageUrl = keyword && keyword.image_url ? keyword.image_url : null;
+    if (imageUrl) {
+      console.log(`🖼️ [IMAGE-URL] Found reference image URL for recipe ${recipeId}: ${imageUrl}`);
+    } else {
+      console.log(`🖼️ [IMAGE-URL] No reference image URL found for recipe ${recipeId}`);
+    }
+    
     // Get the facebook_content record for this recipe to use existing prompt if available
     const facebookContent = await getOne(
       "SELECT * FROM facebook_content WHERE recipe_id = ? ORDER BY id DESC LIMIT 1",
@@ -167,15 +226,25 @@ async function generateImageForRecipeWithSettings(recipeId, discordSettings = nu
     
     // Check if we have facebook_content and it has an mj_prompt field
     if (facebookContent && facebookContent.mj_prompt) {
+      // Use existing prompt
       originalPrompt = facebookContent.mj_prompt;
-      console.log('Using existing mj_prompt from facebook_content table');
+      console.log('🔄 [PROMPT] Using existing mj_prompt from facebook_content table');
+      console.log('🔍 [PROMPT] Original prompt from DB:', originalPrompt);
+      
+      // FIXED: Add image URL with correct syntax if we have one
+      if (imageUrl) {
+        originalPrompt = addImageUrlToPrompt(originalPrompt, imageUrl);
+        console.log('🖼️ [PROMPT] Added reference image URL to existing prompt');
+        console.log('🔍 [PROMPT] Updated prompt with image:', originalPrompt);
+      }
     } else {
-      // If no prompt found, generate a new one
-      console.log('No existing prompt found, generating new one');
-      originalPrompt = generatePrompt(recipe);
+      // If no prompt found, generate a new one with image URL included if available
+      console.log('🆕 [PROMPT] No existing prompt found, generating new one');
+      originalPrompt = generatePrompt(recipe, imageUrl);
+      console.log('🔍 [PROMPT] Generated new prompt:', originalPrompt);
     }
     
-    console.log(`Original prompt: ${originalPrompt}`);
+    console.log(`🎯 [FINAL] Final prompt with image reference: ${originalPrompt}`);
     
     // Filter the prompt before sending to Midjourney
     const filterResult = filterPromptForMidjourney(originalPrompt);
@@ -210,7 +279,7 @@ async function generateImageForRecipeWithSettings(recipeId, discordSettings = nu
       });
     }
     
-    // FIXED: Create entry in database with 'pending' status and generate UUID
+    // Create entry in database with 'pending' status and generate UUID
     console.log('📝 Creating database record...');
     
     // Generate a UUID for the record (since your table uses UUIDs)
@@ -241,6 +310,11 @@ async function generateImageForRecipeWithSettings(recipeId, discordSettings = nu
       status: verifyCreation.status
     });
     
+    // ADD: Random delay before starting (human-like)
+    const initialDelay = Math.random() * 3000 + 2000; // 2-5 seconds
+    console.log(`⏳ Waiting ${Math.round(initialDelay/1000)}s before starting...`);
+    await new Promise(resolve => setTimeout(resolve, initialDelay));
+    
     // Reset any existing instance to ensure fresh settings
     MidjourneyClient.resetInstance();
     
@@ -249,7 +323,7 @@ async function generateImageForRecipeWithSettings(recipeId, discordSettings = nu
     
     console.log(`Generating image for recipe ${recipeId} with filtered prompt: ${finalPrompt}`);
     
-    // FIXED: Update status to 'generating' before calling Midjourney
+    // Update status to 'generating' before calling Midjourney
     console.log(`🔄 Updating status to 'generating' for record: ${imageId}`);
     
     await runQuery(
@@ -270,12 +344,13 @@ async function generateImageForRecipeWithSettings(recipeId, discordSettings = nu
     
     console.log(`Updated status to 'generating' for image ID: ${imageId}`);
     
-    // Right before: const mjResult = await client.createImage(finalPrompt, '--v 5 --q 2', null);
-console.log('🔍 [PRE-MIDJOURNEY DEBUG] About to send to Midjourney:');
-console.log('   Final prompt:', finalPrompt);
-console.log('   Prompt length:', finalPrompt.length);
-console.log('   Contains "very"?', finalPrompt.includes('very'));
-console.log('   First 200 chars:', finalPrompt.substring(0, 200));
+    // ENHANCED: Debug logging before sending to Midjourney
+    console.log('🔍 [PRE-MIDJOURNEY DEBUG] About to send to Midjourney:');
+    console.log('   Final prompt:', finalPrompt);
+    console.log('   Prompt length:', finalPrompt.length);
+    console.log('   Starts with image URL?', finalPrompt.startsWith('http'));
+    console.log('   Contains --iw?', finalPrompt.includes('--iw'));
+    console.log('   First 200 chars:', finalPrompt.substring(0, 200));
 
     // Use the createImage method WITHOUT upscaling (upscaleIndex = null)
     const mjResult = await client.createImage(finalPrompt, '--v 5 --q 2', null);
@@ -290,15 +365,15 @@ console.log('   First 200 chars:', finalPrompt.substring(0, 200));
       throw new Error('No result returned from Midjourney client');
     }
     
-    // FIXED: Better processing of different response formats
+    // Process different response formats
     let imagePath = '';
-    let imageUrl = '';
+    let resultImageUrl = '';
     let succeeded = false;
     
     // Check for upscaled_photo_url first (this is the grid image)
     if (mjResult.upscaled_photo_url) {
       console.log('🖼️ Processing upscaled_photo_url:', mjResult.upscaled_photo_url);
-      imageUrl = mjResult.upscaled_photo_url;
+      resultImageUrl = mjResult.upscaled_photo_url;
       
       if (mjResult.upscaled_photo_url.includes('/recipe_images/')) {
         // This is a local file path already, extract just the filename
@@ -345,7 +420,7 @@ console.log('   First 200 chars:', finalPrompt.substring(0, 200));
     // Check for grid_info as fallback
     else if (mjResult.grid_info && mjResult.grid_info.grid_url) {
       console.log('🖼️ Processing grid_info.grid_url:', mjResult.grid_info.grid_url);
-      imageUrl = mjResult.grid_info.grid_url;
+      resultImageUrl = mjResult.grid_info.grid_url;
       
       // Similar logic for grid_info
       const possibleFilename = `grid_${Date.now()}.png`;
@@ -379,13 +454,13 @@ console.log('   First 200 chars:', finalPrompt.substring(0, 200));
       }
     }
     
-    // ENHANCED: Always update the database record with comprehensive verification
+    // Update the database record with comprehensive verification
     const finalStatus = succeeded ? 'completed' : 'failed';
     const errorMessage = succeeded ? null : 'Image file not found after generation';
 
     console.log(`🔄 Attempting to update database record ${imageId} with status: ${finalStatus}`);
     console.log(`📁 Image path: ${imagePath}`);
-    console.log(`🌐 Image URL: ${imageUrl}`);
+    console.log(`🌐 Image URL: ${resultImageUrl}`);
     console.log(`🆔 Record ID type: ${typeof imageId}, value: ${imageId}`);
 
     try {
@@ -447,7 +522,7 @@ console.log('   First 200 chars:', finalPrompt.substring(0, 200));
       
       console.log(`📊 Raw update result:`, updateResult);
       
-      // CRITICAL: Verify the update actually worked
+      // Verify the update actually worked
       console.log(`🔍 Verifying update was successful...`);
       const verifiedRecord = await getOne(
         "SELECT id, recipe_id, status, image_path, error, discord_message_id FROM recipe_images WHERE id = ?",
@@ -545,7 +620,7 @@ console.log('   First 200 chars:', finalPrompt.substring(0, 200));
       return {
         id: imageId,
         imagePath: imagePath,
-        imageUrl: imageUrl,
+        imageUrl: resultImageUrl,
         success: true,
         note: mjResult.note || 'Grid image processed successfully',
         filterResult: filterResult
@@ -844,5 +919,6 @@ module.exports = {
   exportImagesToCSV,
   deleteRecipeImage,
   testPromptFilter,
-  filterPromptForMidjourney
+  filterPromptForMidjourney,
+  addImageUrlToPrompt // Export the helper function for testing
 };

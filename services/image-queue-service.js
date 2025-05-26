@@ -293,6 +293,11 @@ class ImageQueueService {
     this.currentJobs++;
     console.log(`🎨 Processing job ${job.id} for recipe ${job.recipe_id} (${this.currentJobs}/${this.maxConcurrentJobs})`);
 
+    // ADD: Random delay before processing (1-5 seconds)
+    const preProcessDelay = Math.random() * 4000 + 1000;
+    console.log(`⏳ Pre-process delay: ${Math.round(preProcessDelay/1000)}s for job ${job.id}`);
+    await this.wait(preProcessDelay);
+
     // Add timeout for individual jobs
     const jobTimeout = setTimeout(async () => {
       console.log(`⏰ Job ${job.id} timed out after 5 minutes`);
@@ -341,6 +346,11 @@ class ImageQueueService {
           completed_at: new Date().toISOString()
         });
         console.log(`✅ Job ${job.id} completed successfully`);
+        
+        // ADD: Random delay after completion (3-8 seconds)
+        const postProcessDelay = Math.random() * 5000 + 3000;
+        console.log(`⏳ Post-process delay: ${Math.round(postProcessDelay/1000)}s for job ${job.id}`);
+        await this.wait(postProcessDelay);
       } else {
         throw new Error(result.error || 'Image generation failed');
       }

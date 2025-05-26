@@ -1,4 +1,4 @@
-<!-- Updated recipes.ejs with improved design and bulk delete -->
+<!-- Updated recipes.ejs with copy functionality -->
 <style>
   /* Force sidebar link colors */
   .sidebar .nav-link { color: white !important; }
@@ -16,7 +16,7 @@
     border-radius: 12px;
     margin-bottom: 16px;
     transition: all 0.3s ease;
-    background-color: #232a47 !important;  /* Match your card background */
+    background-color: #232a47 !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
     position: relative;
     overflow: hidden;
@@ -51,12 +51,11 @@
   
   .recipe-content {
     padding: 20px;
-    cursor: pointer;
   }
   
   .recipe-header {
     display: flex;
-    justify-content: between;
+    justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 12px;
   }
@@ -67,6 +66,7 @@
     color: white;
     margin: 0;
     flex: 1;
+    cursor: pointer;
   }
   
   .recipe-time {
@@ -155,6 +155,110 @@
   .action-btn-delete:hover {
     background: #dc3545;
     transform: scale(1.05);
+  }
+
+  /* Copy functionality styles */
+  .copy-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .copy-toggle {
+    background: rgba(110, 71, 204, 0.15);
+    color: #bca4ff;
+    border: 1px solid rgba(110, 71, 204, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .copy-toggle:hover {
+    background: rgba(110, 71, 204, 0.25);
+    border-color: rgba(110, 71, 204, 0.4);
+  }
+  
+  .copy-toggle i {
+    transition: transform 0.3s ease;
+  }
+  
+  .copy-toggle.collapsed i {
+    transform: rotate(-90deg);
+  }
+  
+  .copy-content {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+    display: none;
+  }
+  
+  .copy-content.show {
+    display: block;
+  }
+  
+  .copy-item {
+    margin-bottom: 16px;
+  }
+  
+  .copy-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .copy-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #3cd5af;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .copy-text {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.875rem;
+    color: #e0e0e0;
+    line-height: 1.4;
+    max-height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  
+  .copy-btn {
+    background: rgba(60, 213, 175, 0.15);
+    color: #3cd5af;
+    border: 1px solid rgba(60, 213, 175, 0.3);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .copy-btn:hover {
+    background: rgba(60, 213, 175, 0.25);
+    border-color: rgba(60, 213, 175, 0.4);
+  }
+  
+  .no-content {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 20px;
   }
   
   /* Selection controls */
@@ -272,7 +376,7 @@
   
   /* Header improvements */
   .page-header {
-  background: linear-gradient(135deg, #6e47cc 0%, #5a3ab3 100%);  /* Match your purple theme */
+  background: linear-gradient(135deg, #6e47cc 0%, #5a3ab3 100%);
     color: white;
     padding: 24px;
     border-radius: 12px;
@@ -344,6 +448,15 @@
     
     .recipe-time {
       margin-left: 0;
+    }
+
+    .copy-content {
+      padding: 12px;
+    }
+    
+    .copy-text {
+      font-size: 0.8rem;
+      max-height: 120px;
     }
   }
 </style>
@@ -426,9 +539,11 @@
           </div>
           
           <!-- Recipe Content -->
-          <div class="recipe-content" onclick="window.location.href='/recipe/<%= recipe.id %>'">
+          <div class="recipe-content">
             <div class="recipe-header">
-              <h3 class="recipe-title"><%= recipe.recipe_idea %></h3>
+              <h3 class="recipe-title" onclick="window.location.href='/recipe/<%= recipe.id %>'">
+                <%= recipe.recipe_idea %>
+              </h3>
               <span class="recipe-time"><%= moment(recipe.created_at).fromNow() %></span>
             </div>
             
@@ -447,6 +562,91 @@
                 <span><%= recipe.owner_name || 'Unknown' %></span>
               </div>
             </div>
+
+            <!-- Copy Section -->
+            <% if (recipe.facebook || recipe.pinterest) { %>
+              <div class="copy-section">
+                <button type="button" class="copy-toggle collapsed" data-target="copy-content-<%= recipe.id %>">
+                  <span><i class="fa fa-copy"></i> Copy Social Media Content</span>
+                  <i class="fa fa-chevron-down"></i>
+                </button>
+                
+                <div class="copy-content" id="copy-content-<%= recipe.id %>">
+                  <% if (recipe.facebook) { %>
+                    <!-- Facebook Content -->
+                    <% if (recipe.facebook.recipe_text) { %>
+                      <div class="copy-item">
+                        <div class="copy-label">
+                          <span><i class="fab fa-facebook"></i> Facebook Recipe</span>
+                          <button type="button" class="copy-btn" data-content="facebook-recipe-<%= recipe.id %>">
+                            <i class="fa fa-copy"></i> Copy
+                          </button>
+                        </div>
+                        <div class="copy-text" id="facebook-recipe-<%= recipe.id %>"><%= recipe.facebook.recipe_text %></div>
+                      </div>
+                    <% } %>
+                    
+                    <% if (recipe.facebook.fb_caption) { %>
+                      <div class="copy-item">
+                        <div class="copy-label">
+                          <span><i class="fab fa-facebook"></i> Facebook Caption</span>
+                          <button type="button" class="copy-btn" data-content="facebook-caption-<%= recipe.id %>">
+                            <i class="fa fa-copy"></i> Copy
+                          </button>
+                        </div>
+                        <div class="copy-text" id="facebook-caption-<%= recipe.id %>"><%= recipe.facebook.fb_caption %></div>
+                      </div>
+                    <% } %>
+                  <% } %>
+
+                  <% if (recipe.pinterest) { %>
+                    <!-- Pinterest Content -->
+                    <% if (recipe.pinterest.pin_title) { %>
+                      <div class="copy-item">
+                        <div class="copy-label">
+                          <span><i class="fab fa-pinterest"></i> Pinterest Title</span>
+                          <button type="button" class="copy-btn" data-content="pinterest-title-<%= recipe.id %>">
+                            <i class="fa fa-copy"></i> Copy
+                          </button>
+                        </div>
+                        <div class="copy-text" id="pinterest-title-<%= recipe.id %>"><%= recipe.pinterest.pin_title %></div>
+                      </div>
+                    <% } %>
+                    
+                    <% if (recipe.pinterest.pin_description) { %>
+                      <div class="copy-item">
+                        <div class="copy-label">
+                          <span><i class="fab fa-pinterest"></i> Pinterest Description</span>
+                          <button type="button" class="copy-btn" data-content="pinterest-description-<%= recipe.id %>">
+                            <i class="fa fa-copy"></i> Copy
+                          </button>
+                        </div>
+                        <div class="copy-text" id="pinterest-description-<%= recipe.id %>"><%= recipe.pinterest.pin_description %></div>
+                      </div>
+                    <% } %>
+                    
+                    <% if (recipe.pinterest.overlay_text) { %>
+                      <div class="copy-item">
+                        <div class="copy-label">
+                          <span><i class="fab fa-pinterest"></i> Text Overlay</span>
+                          <button type="button" class="copy-btn" data-content="pinterest-overlay-<%= recipe.id %>">
+                            <i class="fa fa-copy"></i> Copy
+                          </button>
+                        </div>
+                        <div class="copy-text" id="pinterest-overlay-<%= recipe.id %>"><%= recipe.pinterest.overlay_text %></div>
+                      </div>
+                    <% } %>
+                  <% } %>
+                </div>
+              </div>
+            <% } else { %>
+              <div class="copy-section">
+                <div class="no-content">
+                  <i class="fa fa-info-circle"></i> No social media content generated yet.
+                  <a href="/recipe/<%= recipe.id %>" style="color: #3cd5af;">View recipe details</a> to generate content.
+                </div>
+              </div>
+            <% } %>
           </div>
         </div>
       <% }); %>
@@ -560,7 +760,7 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Selection management
+    // Selection management (existing code)
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const recipeCheckboxes = document.querySelectorAll('.recipe-checkbox');
     const exportSelectedBtn = document.getElementById('exportSelectedBtn');
@@ -568,6 +768,31 @@
     const selectedCountSpan = document.getElementById('selectedCount');
     const selectionInfo = document.getElementById('selectionInfo');
     const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    
+    // Copy toggle functionality - NEW FEATURE
+    document.addEventListener('click', function(event) {
+      const copyToggle = event.target.closest('.copy-toggle');
+      if (!copyToggle) return;
+      
+      const targetId = copyToggle.getAttribute('data-target');
+      const targetElement = document.getElementById(targetId);
+      const chevronIcon = copyToggle.querySelector('i.fa-chevron-down');
+      
+      if (targetElement) {
+        if (targetElement.classList.contains('show')) {
+          targetElement.classList.remove('show');
+          copyToggle.classList.add('collapsed');
+          chevronIcon.style.transform = 'rotate(-90deg)';
+        } else {
+          targetElement.classList.add('show');
+          copyToggle.classList.remove('collapsed');
+          chevronIcon.style.transform = 'rotate(0deg)';
+        }
+      }
+      
+      event.preventDefault();
+      event.stopPropagation();
+    });
     
     // Update selection display
     function updateSelectionDisplay() {

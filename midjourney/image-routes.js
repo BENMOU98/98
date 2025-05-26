@@ -534,6 +534,193 @@ router.get('/api/admin/queue-stats', auth.isAdmin, async (req, res) => {
 });
 
 // ================================
+// FILTER ROUTES
+// ================================
+
+// POST /api/test-prompt-filter - Test prompt filtering
+router.post('/api/test-prompt-filter', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        message: 'Prompt text is required'
+      });
+    }
+    
+    const imageGenerator = require('./image-generator');
+    const result = imageGenerator.testPromptFilter(prompt);
+    
+    res.json({
+      success: true,
+      result: result
+    });
+  } catch (error) {
+    console.error('Error testing prompt filter:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// GET /api/filter-stats - Get filter statistics
+router.get('/api/filter-stats', async (req, res) => {
+  try {
+    // Get overall stats
+    const stats = await getOne('SELECT * FROM prompt_filter_stats ORDER BY id DESC LIMIT 1');
+    
+    // Get recent filtered images
+    const recentFiltered = await getAll(`
+      SELECT ri.*, r.recipe_idea 
+      FROM recipe_images ri
+      LEFT JOIN recipes r ON ri.recipe_id = r.id
+      WHERE ri.filter_changes IS NOT NULL 
+        AND ri.filter_changes != '[]'
+      ORDER BY ri.created_at DESC 
+      LIMIT 10
+    `);
+    
+    // Parse filter changes for analysis
+    const changeAnalysis = {};
+    recentFiltered.forEach(image => {
+      try {
+        const changes = JSON.parse(image.filter_changes || '[]');
+        changes.forEach(change => {
+          const key = `${change.original} → ${change.replacement}`;
+          changeAnalysis[key] = (changeAnalysis[key] || 0) + 1;
+        });
+      } catch (e) {
+        // Skip invalid JSON
+      }
+    });
+    
+    res.json({
+      success: true,
+      stats: stats || {
+        total_prompts: 0,
+        filtered_prompts: 0,
+        blocked_prompts: 0
+      },
+      recentFiltered: recentFiltered,
+      commonChanges: changeAnalysis
+    });
+  } catch (error) {
+    console.error('Error getting filter stats:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// GET /api/banned-words - Get banned words list
+router.get('/api/banned-words', async (req, res) => {
+  try {
+    const promptFilter = require('./prompt-filter');
+    const bannedWords = promptFilter.getBannedWords();
+    
+    res.json({
+      success: true,
+      bannedWords: bannedWords,
+      count: Object.keys(bannedWords).length
+    });
+  } catch (error) {
+    console.error('Error getting banned words:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// POST /api/banned-words - Add custom banned word
+router.post('/api/banned-words', async (req, res) => {
+  try {
+    const { word, replacements } = req.body;
+    
+    if (!word || !replacements) {
+      return res.status(400).json({
+        success: false,
+        message: 'Word and replacements are required'
+      });
+    }
+    
+    const promptFilter = require('./prompt-filter');
+    promptFilter.addBannedWord(word, replacements);
+    
+    res.json({
+      success: true,
+      message: `Added "${word}" to banned words list`
+    });
+  } catch (error) {
+    console.error('Error adding banned word:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// DELETE /api/banned-words/:word - Remove banned word
+router.delete('/api/banned-words/:word', async (req, res) => {
+  try {
+    const word = req.params.word;
+    
+    const promptFilter = require('./prompt-filter');
+    promptFilter.removeBannedWord(word);
+    
+    res.json({
+      success: true,
+      message: `Removed "${word}" from banned words list`
+    });
+  } catch (error) {
+    console.error('Error removing banned word:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// POST /api/test-batch-filter - Test multiple prompts at once
+router.post('/api/test-batch-filter', async (req, res) => {
+  try {
+    const { prompts } = req.body;
+    
+    if (!Array.isArray(prompts) || prompts.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Array of prompts is required'
+      });
+    }
+    
+    const promptFilter = require('./prompt-filter');
+    const results = promptFilter.filterPrompts(prompts, {
+      strictMode: true,
+      context: 'photography',
+      allowReplacements: true,
+      logChanges: false // Don't spam console for batch operations
+    });
+    
+    const stats = promptFilter.getFilterStats(results);
+    
+    res.json({
+      success: true,
+      results: results,
+      stats: stats
+    });
+  } catch (error) {
+    console.error('Error in batch filter test:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// ================================
 // API ROUTES - PARAMETERIZED PATHS
 // ================================
 
@@ -870,6 +1057,111 @@ if (process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_ROUTES ===
       body: req.body,
       message: 'Test body route working correctly'
     });
+  });
+
+  // GET /api/test-simple-generation - Test simple generation
+  router.get('/api/test-simple-generation', async (req, res) => {
+    try {
+      console.log('🧪 Testing simple image generation...');
+      
+      const client = MidjourneyClient.getInstance();
+      
+      // Ensure initialization
+      if (!client.userId || !client.guildId) {
+        console.log('⚠️ Client needs initialization...');
+        await client.initialize();
+      }
+      
+      // Add the test method if it doesn't exist
+      if (!client.testDiscordInteraction) {
+        client.testDiscordInteraction = async function() {
+          try {
+            console.log('🧪 Testing Discord interaction...');
+            
+            const testId = Date.now();
+            const testPrompt = `test simple prompt ${testId}`;
+            
+            console.log(`🔍 Test unique ID: ${testId}`);
+            
+            // Submit test prompt
+            const params = {
+              type: 2,
+              application_id: this.applicationId,
+              guild_id: this.guildId,
+              channel_id: this.channelId,
+              session_id: this.sessionId,
+              data: {
+                id: this.dataId,
+                version: this.dataVersion,
+                name: 'imagine',
+                type: 1,
+                options: [
+                  {
+                    type: 3,
+                    name: 'prompt',
+                    value: testPrompt
+                  }
+                ]
+              }
+            };
+            
+            console.log('📤 Submitting test interaction...');
+            const response = await this.client.post('/interactions', params);
+            
+            console.log('✅ Interaction response:', response.status);
+            
+            // Wait and check for message
+            console.log('⏳ Waiting 5 seconds then checking for message...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            const messagesResponse = await this.client.get(`/channels/${this.channelId}/messages?limit=10`);
+            const messages = messagesResponse.data;
+            
+            console.log(`📨 Retrieved ${messages.length} recent messages`);
+            
+            let found = false;
+            for (let i = 0; i < messages.length; i++) {
+              const msg = messages[i];
+              console.log(`📝 Message ${i + 1}: ${msg.content.substring(0, 80)}...`);
+              
+              if (msg.content.includes(testId.toString())) {
+                console.log('✅ SUCCESS: Test message found in Discord!');
+                found = true;
+                break;
+              }
+            }
+            
+            if (!found) {
+              console.log('❌ PROBLEM: Test message NOT found in Discord');
+            }
+            
+            return { success: found, testId: testId, messages: messages.length };
+            
+          } catch (error) {
+            console.error('❌ Test failed:', error.message);
+            return { success: false, error: error.message };
+          }
+        };
+      }
+      
+      // Run the test
+      const result = await client.testDiscordInteraction();
+      
+      res.json({
+        success: true,
+        testResult: result,
+        message: result.success ? 
+          'Discord interaction working correctly!' : 
+          'Discord interaction has issues - check server logs'
+      });
+      
+    } catch (error) {
+      console.error('Test endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
   });
 }
 

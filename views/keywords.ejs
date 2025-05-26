@@ -103,13 +103,54 @@
               <div class="mb-3">
                 <label for="keywords" class="form-label">Recipe Keywords (One per line)</label>
                 <textarea class="form-control" id="keywords" name="keywords" rows="10" placeholder="Enter one recipe idea per line, for example:
-Chocolate chip cookies
-Beef lasagna
-Vegetarian stir fry
-Thai green curry"></textarea>
+              Chocolate chip cookies
+              Beef lasagna
+              Vegetarian stir fry
+              Thai green curry"></textarea>
+              </div>
+              
+              <div class="mb-3">
+                <label for="imageUrl" class="form-label">Reference Image URL (optional)</label>
+                <input type="url" class="form-control" id="imageUrl" name="imageUrl" placeholder="https://example.com/image.jpg">
+                <div class="form-text">Add a reference image URL to include in Midjourney prompt</div>
               </div>
             </div>
 
+            <!-- Excel Upload Tab -->
+            <div class="tab-pane fade" id="excel" role="tabpanel" aria-labelledby="excel-tab">
+              <div class="mb-3">
+                <label for="excelFile" class="form-label">Upload Excel File</label>
+                <input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx, .xls, .csv">
+                <div class="form-text">
+                  Excel file should have columns with these headers:
+                  <ul class="mt-2">
+                    <li><strong>Keyword</strong> (required) - The recipe idea</li>
+                    <li><strong>Category</strong> (optional) - Recipe category</li>
+                    <li><strong>ImageUrl</strong> (optional) - Reference image URL for Midjourney</li>
+                    <li><strong>Interests</strong> (optional) - Target audience interests</li>
+                  </ul>
+                </div>
+                
+              </div>
+              <div id="excelPreview" class="mb-3 d-none">
+                <h6>Excel Preview</h6>
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered">
+                    <thead id="excelPreviewHeader"></thead>
+                    <tbody id="excelPreviewBody"></tbody>
+                  </table>
+                </div>
+                <p class="text-muted"><small>Showing preview of first 5 rows</small></p>
+              </div>
+              
+              <!-- Excel Tab Default Image URL -->
+              <div class="mb-3">
+                <label for="excelDefaultImageUrl" class="form-label">Default Reference Image URL (optional)</label>
+                <input type="url" class="form-control" id="excelDefaultImageUrl" name="excelDefaultImageUrl" placeholder="https://example.com/image.jpg">
+                <div class="form-text">Used for keywords without an image URL in the Excel file</div>
+              </div>
+            </div>
+            
             <!-- PinClicks Analysis Tab -->
             <div class="tab-pane fade" id="pinclicks" role="tabpanel" aria-labelledby="pinclicks-tab">
               <div class="alert alert-info">
@@ -150,6 +191,13 @@ Thai green curry"></textarea>
                 </select>
               </div>
               
+              <!-- PinClicks Image URL Field -->
+              <div class="mb-3">
+                <label for="pinclicksImageUrl" class="form-label">Reference Image URL (optional)</label>
+                <input type="url" class="form-control" id="pinclicksImageUrl" name="pinclicksImageUrl" placeholder="https://example.com/image.jpg">
+                <div class="form-text">Add a reference image URL to include in Midjourney prompt</div>
+              </div>
+              
               <div id="pinclicksAnalysisResult" class="mb-3 d-none">
                 <div class="card">
                   <div class="card-header">
@@ -165,32 +213,6 @@ Thai green curry"></textarea>
               
               <button type="button" id="analyzePinclicksBtn" class="btn btn-secondary mb-3">Analyze CSV</button>
               <button type="button" id="addFromPinclicksBtn" class="btn btn-primary mb-3 d-none">Add Keyword with Interests</button>
-            </div>
-            
-            <!-- Excel Upload Tab -->
-            <div class="tab-pane fade" id="excel" role="tabpanel" aria-labelledby="excel-tab">
-              <div class="mb-3">
-                <label for="excelFile" class="form-label">Upload Excel File</label>
-                <input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx, .xls, .csv">
-                <div class="form-text">
-                  Excel file should have columns with these headers:
-                  <ul class="mt-2">
-                    <li><strong>Keyword</strong> (required) - The recipe idea</li>
-                    <li><strong>Category</strong> (optional) - Recipe category</li>
-                    <li><strong>Interests</strong> (optional) - Target audience interests</li>
-                  </ul>
-                </div>
-              </div>
-              <div id="excelPreview" class="mb-3 d-none">
-                <h6>Excel Preview</h6>
-                <div class="table-responsive">
-                  <table class="table table-sm table-bordered">
-                    <thead id="excelPreviewHeader"></thead>
-                    <tbody id="excelPreviewBody"></tbody>
-                  </table>
-                </div>
-                <p class="text-muted"><small>Showing preview of first 5 rows</small></p>
-              </div>
             </div>
           </div>
           
@@ -286,6 +308,7 @@ Thai green curry"></textarea>
           <th>Keyword</th>
           <th>Category</th>
           <th>Interests</th>
+          <th>Image URL</th>
           <th>Status</th>
           <th>Image Status</th>
           <th>Added</th>
@@ -317,6 +340,15 @@ Thai green curry"></textarea>
                 </small>
               <% } else { %>
                 <small class="text-muted">None</small>
+              <% } %>
+            </td>
+            <td>
+              <% if (keyword.image_url) { %>
+                <a href="<%= keyword.image_url %>" target="_blank" class="text-truncate d-inline-block" style="max-width: 150px;" title="<%= keyword.image_url %>">
+                  <i class="bi bi-image"></i> View
+                </a>
+              <% } else { %>
+                <span class="text-muted">None</span>
               <% } %>
             </td>
             <td>
@@ -795,7 +827,7 @@ function updateKeywordRowInUI(keywordId, result) {
     console.log(`🔄 Updating UI for keyword ${keywordId} with status: ${result.status}`);
     
     // Update status column
-    const statusCell = row.querySelector('td:nth-child(5)'); // Assuming status is the 5th column
+    const statusCell = row.querySelector('td:nth-child(6)'); // Updated: now 6th column due to Image URL column
     if (statusCell) {
       let statusBadge = '';
       if (result.status === 'processed') {
@@ -1172,6 +1204,7 @@ function updateKeywordRowInUI(keywordId, result) {
       const pinclicksFile = document.getElementById('pinclicksFile');
       const pinclicksKeyword = document.getElementById('pinclicksKeyword');
       const pinclicksCategory = document.getElementById('pinclicksCategory');
+      const pinclicksImageUrl = document.getElementById('pinclicksImageUrl'); // Get image URL
       const extractedInterests = document.getElementById('extractedInterests');
       const pinclicksAnalysisResult = document.getElementById('pinclicksAnalysisResult');
       const addFromPinclicksBtn = document.getElementById('addFromPinclicksBtn');
@@ -1222,7 +1255,8 @@ function updateKeywordRowInUI(keywordId, result) {
             analyzedPinclicksData = {
               keyword: keyword,
               category: pinclicksCategory.value,
-              interests: data.interests
+              interests: data.interests,
+              image_url: pinclicksImageUrl.value // Include image URL
             };
             
             // Display the extracted interests
@@ -1290,6 +1324,7 @@ function updateKeywordRowInUI(keywordId, result) {
           document.getElementById('pinclicksFile').value = '';
           document.getElementById('pinclicksKeyword').value = '';
           document.getElementById('pinclicksCategory').value = '';
+          document.getElementById('pinclicksImageUrl').value = ''; // Reset image URL
           document.getElementById('pinclicksAnalysisResult').classList.add('d-none');
           addFromPinclicksBtn.classList.add('d-none');
           analyzedPinclicksData = null;
@@ -1491,7 +1526,7 @@ function updateKeywordRowInUI(keywordId, result) {
           
           // Validate required columns
           const requiredColumns = ['keyword'];
-          const optionalColumns = ['category', 'interests'];
+          const optionalColumns = ['category', 'interests', 'imageurl'];
           const allColumns = [...requiredColumns, ...optionalColumns];
           
           // Check for required columns (case-insensitive)
@@ -1570,7 +1605,7 @@ function updateKeywordRowInUI(keywordId, result) {
     
     // Create header row
     const headerRow = document.createElement('tr');
-    const displayHeaders = ['Keyword', 'Category', 'Interests'];
+    const displayHeaders = ['Keyword', 'Category', 'Interests', 'Image URL'];
     displayHeaders.forEach(header => {
       const th = document.createElement('th');
       th.textContent = header;
@@ -1602,6 +1637,15 @@ function updateKeywordRowInUI(keywordId, result) {
       }
       tr.appendChild(interestsTd);
       
+      // Image URL column
+      const imageUrlTd = document.createElement('td');
+      const imageUrl = row.imageurl || '';
+      imageUrlTd.textContent = imageUrl.length > 30 ? imageUrl.substring(0, 27) + '...' : imageUrl;
+      if (imageUrl.length > 30) {
+        imageUrlTd.title = imageUrl;
+      }
+      tr.appendChild(imageUrlTd);
+      
       bodyElement.appendChild(tr);
     });
     
@@ -1609,7 +1653,7 @@ function updateKeywordRowInUI(keywordId, result) {
     showStatus('success', `File parsed successfully! Found ${data.normalizedData.length} keywords. Preview shows first 5 rows.`);
   }
 
-  // Function to handle Excel tab submission
+  // Updated function to handle Excel tab submission with image URL
   function handleExcelTabSubmission() {
     if (!parsedExcelData || !parsedExcelData.normalizedData) {
       showStatus('error', 'Please upload and preview an Excel file first.');
@@ -1618,12 +1662,14 @@ function updateKeywordRowInUI(keywordId, result) {
     
     const defaultCategory = document.getElementById('defaultCategory').value;
     const defaultInterests = document.getElementById('defaultInterests').value;
+    const defaultImageUrl = document.getElementById('excelDefaultImageUrl').value; // Get default image URL
     
     // Process the normalized data
     const keywordsToAdd = parsedExcelData.normalizedData.map(row => ({
       keyword: row.keyword.trim(),
       category: row.category && row.category.trim() ? row.category.trim() : defaultCategory,
-      interests: row.interests && row.interests.trim() ? row.interests.trim() : defaultInterests
+      interests: row.interests && row.interests.trim() ? row.interests.trim() : defaultInterests,
+      image_url: row.imageurl && row.imageurl.trim() ? row.imageurl.trim() : defaultImageUrl // Include image URL
     }));
     
     return {
@@ -1653,6 +1699,7 @@ function updateKeywordRowInUI(keywordId, result) {
         const keywords = document.getElementById('keywords').value.trim();
         const defaultCategory = document.getElementById('defaultCategory').value;
         const defaultInterests = document.getElementById('defaultInterests').value;
+        const imageUrl = document.getElementById('imageUrl').value.trim(); // Get image URL
         
         if (!keywords) {
           showStatus('error', 'Please enter at least one keyword.');
@@ -1673,7 +1720,8 @@ function updateKeywordRowInUI(keywordId, result) {
           keywords: keywordsList.map(keyword => ({
             keyword,
             category: defaultCategory,
-            interests: defaultInterests
+            interests: defaultInterests,
+            image_url: imageUrl // Include image URL
           }))
         };
         
