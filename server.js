@@ -1569,7 +1569,7 @@ app.get('/recipes', isAuthenticated, isResourceOwner, async (req, res) => {
     // Get search parameters
     const searchTerm = req.query.search || '';
     const page = parseInt(req.query.page) || 1;
-    const limit = 20;
+    const limit = 24;
     const offset = (page - 1) * limit;
     
     // Use the filters set by isResourceOwner middleware
